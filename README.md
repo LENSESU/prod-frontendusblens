@@ -113,7 +113,7 @@ Donde `TIPO` puede ser uno de:
 - `[UPDATE]` → cuando actualizas o mejoras algo existente.
 - `[DELETE]` → cuando eliminas código, archivos o funcionalidades.
 - `[FIX]`   → cuando corriges un bug o comportamiento incorrecto.
-- `[EDIT]`  → cuando refactorizas, reorganizas o haces cambios internos sin cambiar la funcionalidad.
+
 
 ### Ejemplos correctos
 
@@ -121,7 +121,7 @@ Donde `TIPO` puede ser uno de:
 - `git commit -m "[UPDATE]Actualiza estilos del header"`
 - `git commit -m "[DELETE]Elimina componente no usado"`
 - `git commit -m "[FIX]Corrige validación del formulario de registro"`
-- `git commit -m "[EDIT]Refactoriza estructura de carpetas"`
+
 
 ### Ejemplos incorrectos (serán rechazados por el hook)
 
