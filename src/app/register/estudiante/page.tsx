@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveAuth, getDashboardPathByRole } from "@/utils/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const STUDENT_ROLE_ID = "f2f2e715-dde6-43e7-9bd4-21e222ff4d5e";
+const NAME_PATTERN = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+(?:[ '-][A-Za-zÁÉÍÓÚáéíóúÑñÜü]+)*$/;
+const INSTITUTIONAL_EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@correo\.usbcali\.edu\.co$/;
+const PASSWORD_PATTERN =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&._-])[A-Za-z\d@$!%*?&._-]{8,}$/;
 
 export default function RegisterEstudiantePage() {
   const router = useRouter();
@@ -16,34 +18,118 @@ export default function RegisterEstudiantePage() {
   const [showPass, setShowPass]     = useState(false);
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    password?: string;
+  }>({});
+
+  function clearFieldError(field: "firstName" | "lastName" | "email" | "password") {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      return { ...current, [field]: undefined };
+    });
+  }
+
+  function getRegisterErrorMessage(detail?: unknown): string {
+    const expectedDomain = "@correo.usbcali.edu.co";
+
+    if (Array.isArray(detail)) {
+      const messages = detail.map((entry: { msg?: string }) => entry.msg ?? "");
+      if (messages.some((message) => message.toLowerCase().includes("dominio"))) {
+        return `El correo debe pertenecer al dominio ${expectedDomain}.`;
+      }
+      return messages.join(", ");
+    }
+
+    if (typeof detail !== "string") {
+      return "No se pudo completar el registro.";
+    }
+
+    if (detail.toLowerCase().includes("dominio")) {
+      return `El correo debe pertenecer al dominio ${expectedDomain}.`;
+    }
+
+    return detail;
+  }
 
   async function handleRegisterSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    const trimmedEmail = email.trim();
+    const nextFieldErrors: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      password?: string;
+    } = {};
+
+    if (!trimmedFirstName) {
+      nextFieldErrors.firstName = "El nombre es obligatorio.";
+    } else if (trimmedFirstName.length < 2) {
+      nextFieldErrors.firstName = "El nombre debe tener al menos 2 caracteres.";
+    } else if (!NAME_PATTERN.test(trimmedFirstName)) {
+      nextFieldErrors.firstName =
+        "El nombre solo puede contener letras, espacios, apóstrofes o guiones.";
+    }
+
+    if (!trimmedLastName) {
+      nextFieldErrors.lastName = "El apellido es obligatorio.";
+    } else if (trimmedLastName.length < 2) {
+      nextFieldErrors.lastName = "El apellido debe tener al menos 2 caracteres.";
+    } else if (!NAME_PATTERN.test(trimmedLastName)) {
+      nextFieldErrors.lastName =
+        "El apellido solo puede contener letras, espacios, apóstrofes o guiones.";
+    }
+
+    if (!trimmedEmail) {
+      nextFieldErrors.email = "El correo institucional es obligatorio.";
+    } else if (!INSTITUTIONAL_EMAIL_PATTERN.test(trimmedEmail)) {
+      nextFieldErrors.email =
+        "El correo debe pertenecer al dominio @correo.usbcali.edu.co.";
+    }
+
+    if (!password) {
+      nextFieldErrors.password = "La contraseña es obligatoria.";
+    } else if (!PASSWORD_PATTERN.test(password)) {
+      nextFieldErrors.password =
+        "Debe tener 8 caracteres mínimo, mayúscula, minúscula, número y símbolo.";
+    }
+
+    if (
+      nextFieldErrors.firstName ||
+      nextFieldErrors.lastName ||
+      nextFieldErrors.email ||
+      nextFieldErrors.password
+    ) {
+      setFieldErrors(nextFieldErrors);
+      return;
+    }
+
+    setFieldErrors({});
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/v1/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          email: email.trim(),
+          first_name: trimmedFirstName,
+          last_name: trimmedLastName,
+          email: trimmedEmail,
           password,
-          role_id: STUDENT_ROLE_ID,
         }),
       });
-        const data = await res.json();
-        if (!res.ok) {
-        if (Array.isArray(data.detail)) {
-            setError(data.detail.map((e: { msg: string }) => e.msg).join(", "));
-        } else {
-            setError(data.detail ?? "No se pudo completar el registro.");
-        }
+      const data = await res.json();
+      if (!res.ok) {
+        setError(getRegisterErrorMessage(data.detail));
         return;
-        }
+      }
       // Registro exitoso → redirigir a la pantalla de verificación de código
-      router.push(`/verify-code?email=${encodeURIComponent(email.trim())}`);
+      router.push(`/verify-code?email=${encodeURIComponent(trimmedEmail)}`);
     } catch {
       setError("Sin conexión con el servidor.");
     } finally {
@@ -87,9 +173,21 @@ export default function RegisterEstudiantePage() {
                       autoComplete="given-name"
                       placeholder="Tu nombre"
                       value={firstName}
-                      onChange={e => { setFirstName(e.target.value); setError(null); }}
+                      onChange={e => {
+                        setFirstName(e.target.value);
+                        setError(null);
+                        clearFieldError("firstName");
+                      }}
                       required
+                      aria-invalid={Boolean(fieldErrors.firstName)}
+                      aria-describedby={fieldErrors.firstName ? "first-name-error" : undefined}
+                      className={fieldErrors.firstName ? "input-error" : ""}
                     />
+                    {fieldErrors.firstName ? (
+                      <p id="first-name-error" className="field-error-text">
+                        {fieldErrors.firstName}
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="field">
@@ -100,9 +198,21 @@ export default function RegisterEstudiantePage() {
                       autoComplete="family-name"
                       placeholder="Tu apellido"
                       value={lastName}
-                      onChange={e => { setLastName(e.target.value); setError(null); }}
+                      onChange={e => {
+                        setLastName(e.target.value);
+                        setError(null);
+                        clearFieldError("lastName");
+                      }}
                       required
+                      aria-invalid={Boolean(fieldErrors.lastName)}
+                      aria-describedby={fieldErrors.lastName ? "last-name-error" : undefined}
+                      className={fieldErrors.lastName ? "input-error" : ""}
                     />
+                    {fieldErrors.lastName ? (
+                      <p id="last-name-error" className="field-error-text">
+                        {fieldErrors.lastName}
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="field">
@@ -114,10 +224,21 @@ export default function RegisterEstudiantePage() {
                       autoComplete="email"
                       placeholder="usuario@correo.usbcali.edu.co"
                       value={email}
-                      onChange={e => { setEmail(e.target.value); setError(null); }}
+                      onChange={e => {
+                        setEmail(e.target.value);
+                        setError(null);
+                        clearFieldError("email");
+                      }}
                       required
-                      className={error ? "input-error" : ""}
+                      aria-invalid={Boolean(fieldErrors.email)}
+                      aria-describedby={fieldErrors.email ? "email-error" : undefined}
+                      className={fieldErrors.email ? "input-error" : ""}
                     />
+                    {fieldErrors.email ? (
+                      <p id="email-error" className="field-error-text">
+                        {fieldErrors.email}
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="field">
@@ -129,8 +250,15 @@ export default function RegisterEstudiantePage() {
                         autoComplete="new-password"
                         placeholder="••••••••"
                         value={password}
-                        onChange={e => { setPassword(e.target.value); setError(null); }}
+                        onChange={e => {
+                          setPassword(e.target.value);
+                          setError(null);
+                          clearFieldError("password");
+                        }}
                         required
+                        aria-invalid={Boolean(fieldErrors.password)}
+                        aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                        className={fieldErrors.password ? "input-error" : ""}
                       />
                       <button
                         type="button"
@@ -150,6 +278,14 @@ export default function RegisterEstudiantePage() {
                         )}
                       </button>
                     </div>
+                    {fieldErrors.password ? (
+                      <p id="password-error" className="field-error-text">
+                        {fieldErrors.password}
+                      </p>
+                    ) : null}
+                    <p className="text-xs text-hint mt-xs text-left">
+                      Usa 8+ caracteres con mayúscula, minúscula, número y símbolo.
+                    </p>
                   </div>
 
                   {error && (

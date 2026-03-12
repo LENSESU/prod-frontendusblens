@@ -11,6 +11,8 @@ export type AuthData = {
   role: string | null;
 };
 
+export type NormalizedRole = "student" | "administrator" | "technician";
+
 /**
   Guarda la información de autenticación del usuario en el navegador.
  
@@ -42,6 +44,12 @@ export function saveAuth(params: {
 
   localStorage.setItem(AUTH_KEY, JSON.stringify(authData));
   return authData;
+}
+
+export function clearAuth(): void {
+  localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
 }
 
 /**
@@ -81,6 +89,18 @@ export function getDashboardPathByRole(role: string | null): string {
   if (normalized === "administrator") return "/dashboard/admin";
   if (normalized === "technician") return "/dashboard/tecnico";
   return "/";
+}
+
+export function normalizeRole(role: string | null): NormalizedRole | null {
+  const normalized = (role ?? "").toLowerCase();
+  if (
+    normalized === "student" ||
+    normalized === "administrator" ||
+    normalized === "technician"
+  ) {
+    return normalized;
+  }
+  return null;
 }
 
 /**
@@ -148,6 +168,30 @@ async function refreshAccessToken(
   }
 }
 
+async function requestLogout(accessToken: string): Promise<void> {
+  await fetch(`${API_BASE}/api/v1/auth/logout`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export async function logoutSession(): Promise<void> {
+  const auth = getAuth();
+
+  try {
+    if (auth?.accessToken) {
+      await requestLogout(auth.accessToken);
+    }
+  } catch {
+    // La limpieza local debe ocurrir incluso si el backend no responde.
+  } finally {
+    clearAuth();
+  }
+}
+
 /**
   Restaura la sesión del usuario al iniciar la aplicación.
  
@@ -162,26 +206,24 @@ async function refreshAccessToken(
     null si no se puede restaurar la sesión.
  */
 export async function restoreAuthSession(): Promise<AuthData | null> {
-  console.log("Restaurando sesión...");
-
   const auth = getAuth();
-  console.log("Auth guardado:", auth);
 
   if (!auth?.accessToken) return null;
 
   const isValid = await validateAccessToken(auth.accessToken);
-  console.log("¿Token válido?", isValid);
-
   if (isValid) return auth;
 
-  if (!auth.refreshToken) return null;
+  if (!auth.refreshToken) {
+    clearAuth();
+    return null;
+  }
 
-  console.log("Intentando refresh...");
   const refreshed = await refreshAccessToken(auth.refreshToken);
 
-  if (!refreshed?.access_token) return null;
-
-  console.log("Refresh exitoso");
+  if (!refreshed?.access_token) {
+    clearAuth();
+    return null;
+  }
 
   return saveAuth({
     accessToken: refreshed.access_token,

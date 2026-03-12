@@ -10,11 +10,10 @@ export default function AuthProvider({
 }) {
   useEffect(() => {
     async function restore() {
-      console.log("Intentando restaurar sesión...");
       await restoreAuthSession();
     }
 
-    restore();
+    void restore();
   }, []);
 
   return <>{children}</>;

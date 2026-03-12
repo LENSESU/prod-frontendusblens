@@ -1,22 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { restoreAuthSession } from "@/utils/auth";
+import ProtectedDashboard from "@/components/ProtectedDashboard";
 
 export default function EstudianteDashboard() {
-  const router = useRouter();
-
-  useEffect(() => {
-    async function checkAuth() {
-      const auth = await restoreAuthSession();
-      if (!auth) {
-        router.push("/login/estudiante");
-      }
-    }
-
-    checkAuth();
-  }, [router]);
-
-  return <h1>Dashboard Estudiante</h1>;
+  return (
+    <ProtectedDashboard
+      title="Dashboard Estudiante"
+      description="Sesión iniciada correctamente como estudiante."
+      allowedRoles={["student"]}
+      loginPath="/login/estudiante"
+    />
+  );
 }
