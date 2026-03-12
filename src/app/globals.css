@@ -543,6 +543,13 @@ p  { font-size: var(--font-size-body); color: var(--color-text-primary); }
 .field select.input-error,
 .field textarea.input-error { border-color: var(--color-error); }
 
+.field-error-text {
+  font-size: var(--font-size-small);
+  color: var(--color-error);
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
 .input-wrap { position: relative; }
 .input-wrap input { padding-right: 44px; }
 
@@ -854,6 +861,10 @@ p  { font-size: var(--font-size-body); color: var(--color-text-primary); }
   margin-bottom: var(--space-xl);
 }
 
+.verify-alert {
+  margin-bottom: var(--space-md);
+}
+
 .verify-submit-btn {
   width: 100%;
   padding: 12px 0;
@@ -936,4 +947,13 @@ p  { font-size: var(--font-size-body); color: var(--color-text-primary); }
 .code-input-digit:focus {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-focus);
+}
+
+.code-input-group-error .code-input-digit {
+  border-color: var(--color-error);
+}
+
+.code-input-group-error .code-input-digit:focus {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.12);
 }

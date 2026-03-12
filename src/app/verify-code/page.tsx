@@ -17,6 +17,22 @@ function VerifyCodeContent() {
   const [success, setSuccess] = useState(false);
   const [cooldown, setCooldown] = useState(60);
 
+  function getVerifyCodeErrorMessage(detail?: string) {
+    if (!detail) return "Código incorrecto o expirado.";
+
+    const normalizedDetail = detail.toLowerCase();
+
+    if (normalizedDetail.includes("expir")) {
+      return "El código ha expirado. Solicita uno nuevo.";
+    }
+
+    if (normalizedDetail.includes("incorrect") || normalizedDetail.includes("invalid")) {
+      return "El código ingresado no es correcto.";
+    }
+
+    return detail;
+  }
+
   // Si no hay email en los query params, redirigir al registro
   useEffect(() => {
     if (!email) {
@@ -45,7 +61,7 @@ function VerifyCodeContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail ?? "Código incorrecto o expirado.");
+        setError(getVerifyCodeErrorMessage(data.detail));
         return;
       }
 
@@ -155,20 +171,24 @@ function VerifyCodeContent() {
           </p>
 
           <div className="verify-code-wrapper">
-            <CodeInput length={6} onChange={setCode} />
+            <CodeInput
+              length={6}
+              onChange={(nextCode) => {
+                setCode(nextCode);
+                if (error) setError(null);
+              }}
+              hasError={Boolean(error)}
+            />
           </div>
 
           {error && (
-            <p
-              style={{
-                color: "#F44336",
-                fontSize: 14,
-                marginBottom: 16,
-                textAlign: "center",
-              }}
-            >
-              {error}
-            </p>
+            <div className="alert-error verify-alert" role="alert">
+              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4m0 4h.01" />
+              </svg>
+              <p>{error}</p>
+            </div>
           )}
 
           <button
