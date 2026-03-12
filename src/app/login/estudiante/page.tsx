@@ -11,28 +11,61 @@ export default function LoginEstudiantePage() {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError]     = useState<string | null>(null);
+
+  function clearFieldError(field: "email" | "password") {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      return { ...current, [field]: undefined };
+    });
+  }
+
+  function getLoginErrorMessage(detail?: string) {
+    if (!detail) return "Correo o contraseña incorrectos.";
+
+    const normalizedDetail = detail.toLowerCase();
+
+    if (
+      normalizedDetail.includes("incorrect") ||
+      normalizedDetail.includes("invalid") ||
+      normalizedDetail.includes("credencial") ||
+      normalizedDetail.includes("contrase")
+    ) {
+      return "Correo o contraseña incorrectos.";
+    }
+
+    return detail;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
 
     // Validacion de correo
     const pattern = /^[a-zA-Z0-9]+@correo\.usbcali\.edu\.co$/; // '(letras y numeros)@usbcali.edu.co' | Los valores despues del @ son fijos, no hacepta modificaciones.
     const trimmedEmail = email.trim(); // quita los espacios en blanco
+    const trimmedPassword = password.trim();
+    const nextFieldErrors: { email?: string; password?: string } = {};
 
     if(!trimmedEmail){
-      setError("Por favor ingresa tu correo institucional.");
-      return; // Detiene la ejecucion de la funcion para que no llegue al try
+      nextFieldErrors.email = "Por favor ingresa tu correo institucional.";
     }
 
-    if(!pattern.test(trimmedEmail)){ // Validacion del email
-      // Fallo
-      setError("El correo no es correcto.");
-      return; // Detiene la ejecucion de la funcion para que no llegue al try
+    if(trimmedEmail && !pattern.test(trimmedEmail)){ // Validacion del email
+      nextFieldErrors.email = "El correo institucional no es valido.";
     }
 
-    setError(null);
+    if(!trimmedPassword){
+      nextFieldErrors.password = "Por favor ingresa tu contraseña.";
+    }
+
+    if (nextFieldErrors.email || nextFieldErrors.password) {
+      setFieldErrors(nextFieldErrors);
+      return;
+    }
+
+    setFieldErrors({});
     setLoading(true);
 
     try {
@@ -43,14 +76,14 @@ export default function LoginEstudiantePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail ?? "Correo o contraseña incorrectos.");
+        setFormError(getLoginErrorMessage(data.detail));
         return;
       }
       localStorage.setItem("access_token", data.access_token);
       if (data.refresh_token) localStorage.setItem("refresh_token", data.refresh_token);
       router.push("/dashboard/estudiante");
     } catch {
-      setError("Sin conexión con el servidor.");
+      setFormError("Sin conexión con el servidor.");
     } finally {
       setLoading(false);
     }
@@ -89,10 +122,17 @@ export default function LoginEstudiantePage() {
                   autoComplete="email"
                   placeholder="usuario@correo.usbcali.edu.co"
                   value={email}
-                  onChange={e => { setEmail(e.target.value); setError(null); }}
+                  onChange={e => {
+                    setEmail(e.target.value);
+                    setFormError(null);
+                    clearFieldError("email");
+                  }}
                   required
-                  className={error ? "input-error" : ""}
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? "email-error" : undefined}
+                  className={fieldErrors.email ? "input-error" : ""}
                 />
+                {fieldErrors.email && <p id="email-error" className="field-error-text">{fieldErrors.email}</p>}
               </div>
 
               <div className="field">
@@ -104,9 +144,15 @@ export default function LoginEstudiantePage() {
                     autoComplete="current-password"
                     placeholder="••••••••"
                     value={password}
-                    onChange={e => { setPassword(e.target.value); setError(null); }}
+                    onChange={e => {
+                      setPassword(e.target.value);
+                      setFormError(null);
+                      clearFieldError("password");
+                    }}
                     required
-                    className={error ? "input-error" : ""}
+                    aria-invalid={Boolean(fieldErrors.password)}
+                    aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                    className={fieldErrors.password ? "input-error" : ""}
                   />
                   <button
                     type="button"
@@ -126,14 +172,15 @@ export default function LoginEstudiantePage() {
                     )}
                   </button>
                 </div>
+                {fieldErrors.password && <p id="password-error" className="field-error-text">{fieldErrors.password}</p>}
               </div>
 
-              {error && (
+              {formError && (
                 <div className="alert-error" role="alert">
                   <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
                   </svg>
-                  <p>{error}</p>
+                  <p>{formError}</p>
                 </div>
               )}
 
