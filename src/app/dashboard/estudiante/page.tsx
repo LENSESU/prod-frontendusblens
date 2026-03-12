@@ -11,7 +11,7 @@ export default function EstudianteDashboard() {
     async function checkAuth() {
       const auth = await restoreAuthSession();
       if (!auth) {
-        router.push("/login");
+        router.push("/login/estudiante");
       }
     }
 
