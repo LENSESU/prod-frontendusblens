@@ -11,9 +11,10 @@ import {
 interface CodeInputProps {
   length?: number;
   onChange: (code: string) => void;
+  hasError?: boolean;
 }
 
-export default function CodeInput({ length = 6, onChange }: CodeInputProps) {
+export default function CodeInput({ length = 6, onChange, hasError = false }: CodeInputProps) {
   const [values, setValues] = useState<string[]>(Array(length).fill(""));
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -56,7 +57,7 @@ export default function CodeInput({ length = 6, onChange }: CodeInputProps) {
   };
 
   return (
-    <div className="code-input-group">
+    <div className={`code-input-group ${hasError ? "code-input-group-error" : ""}`}>
       {values.map((val, i) => (
         <input
           key={i}
@@ -72,6 +73,7 @@ export default function CodeInput({ length = 6, onChange }: CodeInputProps) {
           onPaste={handlePaste}
           autoFocus={i === 0}
           autoComplete="one-time-code"
+          aria-invalid={hasError}
           className="code-input-digit"
         />
       ))}
