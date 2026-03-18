@@ -37,8 +37,8 @@ export default function RegisterEstudiantePage() {
 
     if (Array.isArray(detail)) {
       const messages = detail.map((entry: { msg?: string }) => entry.msg ?? "");
-      if (messages.some((message) => message.toLowerCase().includes("dominio"))) {
-        return `El correo debe pertenecer al dominio ${expectedDomain}.`;
+      if (messages.some((message) => message.toLowerCase().includes(expectedDomain))) {
+        return `El correo debe pertenecer al dominio ${expectedDomain}`;
       }
       return messages.join(", ");
     }
@@ -47,8 +47,8 @@ export default function RegisterEstudiantePage() {
       return "No se pudo completar el registro.";
     }
 
-    if (detail.toLowerCase().includes("dominio")) {
-      return `El correo debe pertenecer al dominio ${expectedDomain}.`;
+    if (detail.toLowerCase().includes(expectedDomain)) {
+      return `El correo debe pertenecer al dominio ${expectedDomain}`;
     }
 
     return detail;
