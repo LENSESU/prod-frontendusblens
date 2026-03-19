@@ -867,6 +867,119 @@ p  { font-size: var(--font-size-body); color: var(--color-text-primary); }
   box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.12);
 }
 
+/* ============================================================
+   INCIDENT REPORT — Location Field
+   ============================================================ */
+
+.field-required {
+  color: var(--color-error);
+  font-weight: var(--font-weight-bold);
+  margin-left: 2px;
+}
+
+.field-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-hint);
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+.location-field { position: relative; }
+
+.location-hint-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  margin-bottom: var(--space-sm);
+}
+
+.location-hint-banner svg {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.location-hint-banner span {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  line-height: 1.4;
+}
+
+.location-input-wrap { position: relative; }
+
+.location-input-wrap input { padding-right: 40px; }
+
+.location-pin-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-text-hint);
+  display: flex;
+  align-items: center;
+}
+
+.location-pin-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.location-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+  list-style: none;
+  padding: 4px 0;
+  z-index: 100;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.location-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 9px 12px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.location-suggestion-item svg {
+  fill: none;
+  stroke: var(--color-text-hint);
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.location-suggestion-item:hover,
+.suggestion-active {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.location-suggestion-item:hover svg,
+.suggestion-active svg {
+  stroke: var(--color-primary);
+}
+
+.card-body-center .btn-primary + .btn-secondary {
+  margin-top: var(--space-sm);
+}
+
 
 /* ============================================================
    18. MODAL
