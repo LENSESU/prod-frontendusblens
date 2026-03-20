@@ -1,10 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 type Props = {
   open: boolean;
   message: string;
   isError?: boolean;
   onClose: () => void;
+  redirectOnClose?: string;
 };
 
 export default function IncidentResponseModal({
@@ -12,8 +15,19 @@ export default function IncidentResponseModal({
   message,
   isError = false,
   onClose,
+  redirectOnClose,
 }: Props) {
+
+  const router = useRouter();
+
   if (!open) return null;
+
+  function handleClose(){
+    onClose();
+    if (redirectOnClose){
+      router.push(redirectOnClose)
+    }
+  }
 
   return (
     <div className="modal-overlay">
@@ -31,7 +45,7 @@ export default function IncidentResponseModal({
 
           <p className="modal-message">{message}</p>
 
-          <button className="btn-primary w-full" onClick={onClose}>
+          <button className="btn-primary w-full" onClick={handleClose}>
             Cerrar
           </button>
         </div>
