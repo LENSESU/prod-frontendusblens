@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   type AuthData,
@@ -11,7 +11,15 @@ import {
   restoreAuthSession,
 } from "@/utils/auth";
 
+
+type AuthChildrenProps = {
+  auth: AuthData | null;
+  onLogout: () => void;
+  isLoggingOut: boolean;
+};
+
 type ProtectedDashboardProps = {
+  children?: ((props: AuthChildrenProps) => ReactNode) | ReactNode;
   title: string;
   description: string;
   allowedRoles: NormalizedRole[];
@@ -21,6 +29,7 @@ type ProtectedDashboardProps = {
 export default function ProtectedDashboard({
   title,
   description,
+  children,
   allowedRoles,
   loginPath,
 }: ProtectedDashboardProps) {
@@ -70,7 +79,35 @@ export default function ProtectedDashboard({
     router.replace(loginPath);
   }
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <div className="page-centered">
+        <div
+          className="flex flex-col items-center gap-md"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="spinner-dark" aria-hidden />
+          <p className="text-small text-secondary">Cargando sesión...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!auth) {
+    return null;
+  }
+
+  if (children) {
+    return (
+      <div className="min-h-screen bg-[var(--color-bg-page)]">
+        {/* Patron Render Prop para pasar las props a los componentes hijos */}
+        {typeof children === "function"
+          ? children({ auth, onLogout: handleLogout, isLoggingOut })
+          : children}
+      </div>
+    );
+  }
 
   return (
     <div className="page-centered">
