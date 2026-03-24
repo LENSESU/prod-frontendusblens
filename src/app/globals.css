@@ -979,3 +979,93 @@ p  { font-size: var(--font-size-body); color: var(--color-text-primary); }
 .card-body-center .btn-primary + .btn-secondary {
   margin-top: var(--space-sm);
 }
+
+
+/* ============================================================
+   18. MODAL
+   ============================================================ */
+
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(33, 33, 33, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  z-index: 999;
+}
+
+/* El modal ahora ES una card */
+.modal-container {
+  width: min(100%, 380px);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  border: 2px solid transparent;
+  animation: modalFadeIn var(--transition-normal);
+}
+
+/* Stripe superior como las cards */
+.modal-stripe {
+  height: 6px;
+  width: 100%;
+}
+
+/* Contenido tipo card-body */
+.modal-body {
+  padding: var(--space-xl) var(--space-md);
+  text-align: center;
+}
+
+.modal-title {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-sm);
+}
+
+.modal-message {
+  font-size: var(--font-size-body);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--space-lg);
+}
+
+/* Estados visuales usando variables del sistema */
+
+.modal-success .modal-stripe {
+  background: var(--color-success);
+}
+
+.modal-success .modal-title {
+  color: var(--color-text-primary);
+}
+
+.modal-error .modal-stripe {
+  background: var(--color-error);
+}
+
+.modal-error .modal-title {
+  color: var(--color-text-primary);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .modal-container {
+    width: 100%;
+  }
+}
+
+/* Animación */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
