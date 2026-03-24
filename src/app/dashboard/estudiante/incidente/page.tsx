@@ -17,47 +17,45 @@ type IncidentErrors = {
 	image?: string;
 };
 
+type CategoryOption = { id: string; name: string };
+
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-const CATEGORY_FALLBACK_OPTIONS = [
-	"Infraestructura",
-	"Tecnologia",
-	"Seguridad",
-	"Servicios",
-	"Otro",
+const CATEGORY_FALLBACK_OPTIONS: CategoryOption[] = [
+	{ id: "", name: "Infraestructura" },
+	{ id: "", name: "Tecnologia" },
+	{ id: "", name: "Seguridad" },
+	{ id: "", name: "Servicios" },
+	{ id: "", name: "Otro" },
 ];
 
-function parseCategoryOptions(payload: unknown): string[] {
-	const source =
-		Array.isArray(payload)
-			? payload
-			: payload && typeof payload === "object" && "categories" in payload
-				? (payload as { categories?: unknown }).categories
-				: [];
+function parseCategoryOptions(payload: unknown): CategoryOption[] {
+	let source: unknown[] = [];
 
-	if (!Array.isArray(source)) return [];
+	if (Array.isArray(payload)) {
+		source = payload;
+	} else if (payload && typeof payload === "object") {
+		const p = payload as Record<string, unknown>;
+		if (Array.isArray(p.items)) source = p.items;
+		else if (Array.isArray(p.categories)) source = p.categories;
+	}
 
-	const values = source
-		.map((item) => {
-			if (typeof item === "string") return item.trim();
+	const options: CategoryOption[] = [];
+	for (const item of source) {
+		if (item && typeof item === "object") {
+			const candidate = item as Record<string, unknown>;
+			const id = typeof candidate.id === "string" ? candidate.id : "";
+			const name =
+				typeof candidate.name === "string"
+					? candidate.name.trim()
+					: typeof candidate.label === "string"
+						? candidate.label.trim()
+						: "";
+			if (name) options.push({ id, name });
+		}
+	}
 
-			if (item && typeof item === "object") {
-				const candidate = item as {
-					name?: unknown;
-					label?: unknown;
-					title?: unknown;
-				};
-
-				if (typeof candidate.name === "string") return candidate.name.trim();
-				if (typeof candidate.label === "string") return candidate.label.trim();
-				if (typeof candidate.title === "string") return candidate.title.trim();
-			}
-
-			return "";
-		})
-		.filter(Boolean);
-
-	return [...new Set(values)];
+	return options;
 }
 
 export default function EstudianteIncidentePage() {
@@ -74,7 +72,8 @@ export default function EstudianteIncidentePage() {
 	const [location, setLocation] = useState("");
 	const [description, setDescription] = useState("");
 	const [image, setImage] = useState<File | null>(null);
-	const [categoryOptions, setCategoryOptions] = useState<string[]>(CATEGORY_FALLBACK_OPTIONS);
+	const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(CATEGORY_FALLBACK_OPTIONS);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 	const [categoriesLoadError, setCategoriesLoadError] = useState<string | null>(null);
 
@@ -134,7 +133,7 @@ export default function EstudianteIncidentePage() {
 			setCategoriesLoadError(null);
 
 			try {
-				const response = await fetch(`${API}/api/v1/incidents/categories`, {
+				const response = await fetch(`${API}/api/v1/categories/`, {
 					method: "GET",
 					headers: { "Content-Type": "application/json" },
 				});
@@ -222,10 +221,6 @@ export default function EstudianteIncidentePage() {
 			nextErrors.description = "La descripcion es obligatoria.";
 		} else if (trimmedDescription.length < 10) {
 			nextErrors.description = "La descripcion debe tener al menos 10 caracteres.";
-		}
-
-		if (!image) {
-			nextErrors.image = "Debes adjuntar una imagen de soporte.";
 		}
 
 		return nextErrors;
@@ -338,20 +333,55 @@ export default function EstudianteIncidentePage() {
 		handleCloseCamera();
 	}
 
-	function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		setSubmitMessage(null);
 
 		const validationErrors = validateForm();
-		const hasErrors = Object.values(validationErrors).some(Boolean);
-
-		if (hasErrors) {
+		if (Object.values(validationErrors).some(Boolean)) {
 			setErrors(validationErrors);
 			return;
 		}
 
+		if (!auth?.accessToken || auth.accessToken === "dev-mock") {
+			setSubmitMessage("Debes iniciar sesion para enviar un incidente.");
+			return;
+		}
+
 		setErrors({});
-		setSubmitMessage("Incidente listo para enviar. Integracion API pendiente.");
+		setIsSubmitting(true);
+
+		try {
+			const res = await fetch(`${API}/api/v1/incidents/`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${auth.accessToken}`,
+				},
+				body: JSON.stringify({
+					category_id: category,
+					description: description.trim(),
+					campus_place: location.trim() || null,
+				}),
+			});
+
+			if (!res.ok) {
+				const error = (await res.json()) as { detail?: string };
+				setSubmitMessage(
+					typeof error.detail === "string"
+						? error.detail
+						: "No se pudo crear el incidente. Intenta de nuevo.",
+				);
+				return;
+			}
+
+			resetForm();
+			setSubmitMessage("Incidente creado correctamente.");
+		} catch {
+			setSubmitMessage("Error de conexion. Verifica tu red e intenta de nuevo.");
+		} finally {
+			setIsSubmitting(false);
+		}
 	}
 
 	if (isLoading) return null;
@@ -422,8 +452,8 @@ export default function EstudianteIncidentePage() {
 										{isLoadingCategories ? "Cargando categorias..." : "Selecciona una categoria"}
 									</option>
 									{categoryOptions.map((option) => (
-										<option key={option} value={option}>
-											{option}
+										<option key={option.id || option.name} value={option.id}>
+											{option.name}
 										</option>
 									))}
 								</select>
@@ -541,8 +571,8 @@ export default function EstudianteIncidentePage() {
 							<button type="button" className="btn-secondary" onClick={handleCancel}>
 								Cancelar
 							</button>
-							<button type="submit" className="btn-primary">
-								Enviar incidente
+							<button type="submit" className="btn-primary" disabled={isSubmitting}>
+								{isSubmitting ? "Enviando..." : "Enviar incidente"}
 							</button>
 						</form>
 					</div>
