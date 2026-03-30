@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AuthData } from "@/utils/auth";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // Los props que recibe el componente
 type Props = {
@@ -164,6 +165,19 @@ export default function StudentDashboardHome({
   const incidentsCount = "5";
   const suggestionsCount = "5";
   const router = useRouter();
+  const [loadingIncidents, setLoadingIncidents] = useState(true);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoadingIncidents(false), 1500); // Esto se tiene que cambiar por el fetch
+    return () => clearTimeout(t); // Lo mismo
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoadingSuggestions(false), 1500); // Esto se tiene que cambiar por el fetch
+    return () => clearTimeout(t); // Lo mismo
+  }, []);
+
 
   if (!auth) return null;
 
@@ -172,7 +186,7 @@ export default function StudentDashboardHome({
       {/* === Sección: cabecera del panel — md+: fila clásica; móvil: barra blanca (título centrado) + franja saludo + FAB === */}
       {/* FILA 1: Header */}
       <header className="mb-6 sm:mb-8">
-        
+
         {/* Vista móvil: barra superior blanca + franja gris con saludo (mock); el icono de menú es solo visual (sidebar no va aquí) */}
         <div className="-mx-4 mb-4 md:hidden">
           <div className="border-b border-[var(--color-border-light)] bg-white px-4 py-3">
@@ -313,33 +327,49 @@ export default function StudentDashboardHome({
                 </tr>
               </thead>
               <tbody>
-                {MOCK_INCIDENTS.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-[var(--color-border-light)] last:border-0 cursor-pointer"
-                    onClick={() => router.push(`/dashboard/estudiante/detalleIncidente/${row.id}`)}
-                  > {/*CAMBIAR RUTA POR LA PAGINA CORRESPONDIENTE A LOS DETALLES!!!!*/}
-                    <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
-                      {row.id}
-                    </td>
-                    <td className="px-3 py-3">{row.category}</td>
-                    <td className="px-3 py-3">{row.place}</td>
-                    <td className="px-3 py-3">
-                      <IncidentStatusBadge status={row.status} />
-                    </td>
-                    <td className="px-3 py-3 text-[var(--color-text-secondary)]">
-                      {row.date}
+                {loadingIncidents ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                      Cargando...
                     </td>
                   </tr>
-                ))}
+                ) : MOCK_INCIDENTS.length === 0 ? ( // Cambiar MOCK_INCIDENTS por la variable que se use para los datos de la BD en su momento
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                      No tienes incidentes registrados aún.
+                    </td>
+                  </tr>
+                ) : (
+                  MOCK_INCIDENTS.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-b border-[var(--color-border-light)] last:border-0 cursor-pointer"
+                      onClick={() => router.push(`/dashboard/estudiante/detalleIncidente/${row.id}`) /*Cambiar por la ruta correspondiente a la pagina*/}
+                    >
+                      <td className="px-3 py-3 font-medium text-[var(--color-primary)]">{row.id}</td>
+                      <td className="px-3 py-3">{row.category}</td>
+                      <td className="px-3 py-3">{row.place}</td>
+                      <td className="px-3 py-3"><IncidentStatusBadge status={row.status} /></td>
+                      <td className="px-3 py-3 text-[var(--color-text-secondary)]">{row.date}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Vista móvil: lista de tarjetas (misma data que MOCK_INCIDENTS) */}
           <ul className="flex flex-col divide-y divide-[var(--color-border-light)] md:hidden">
-            {MOCK_INCIDENTS.map((row) => (
-              <li key={`m-${row.id}`}>
+            {loadingIncidents ? (
+              <li className="px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                Cargando...
+              </li>
+            ) : MOCK_INCIDENTS.length === 0 ? ( // Cambiar MOCK_INCIDENTS por la variable que se use para los datos de la BD en su momento
+              <li className="px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                No tienes incidentes registrados aún.
+              </li>
+            ) : MOCK_INCIDENTS.map((row) => (
+              <li key={`m-${row.id}`} onClick={() => router.push(`/dashboard/estudiante/detalleIncidente/${row.id}`) /*Cambiar por la ruta correspondiente a la pagina*/}>
                 <div className="flex items-start gap-3 p-4">
                   <DocIconSmall />
                   <div className="min-w-0 flex-1">
@@ -358,7 +388,8 @@ export default function StudentDashboardHome({
                   </div>
                 </div>
               </li>
-            ))}
+            ))
+            }
           </ul>
         </section>
 
@@ -370,7 +401,15 @@ export default function StudentDashboardHome({
             </h2>
           </div>
           <div className="p-3 text-sm text-[var(--color-text-secondary)] sm:p-4">
-            <div className="flex flex-col gap-3">
+            {loadingSuggestions ? (
+              <p className="py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                Cargando...
+              </p>
+            ) : false ? ( // Cambiar por la variable que almacene la longitud de las sugerencias
+              <p className="py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                No hay sugerencias populares por el momento.
+              </p>
+            ) : /*Agregar el map de las sugerencias cuando existan */(<div className="flex flex-col gap-3"> 
               {/* ITEM */}
               <div className="flex items-center gap-3 card-clickable rounded-lg border-b border-[var(--color-border-light)] p-3">
                 {/* VOTOS */}
@@ -454,7 +493,9 @@ export default function StudentDashboardHome({
                   </div>
                 </div>
               </div>
-            </div>
+            </div>)
+
+            }
           </div>
         </section>
       </div>
