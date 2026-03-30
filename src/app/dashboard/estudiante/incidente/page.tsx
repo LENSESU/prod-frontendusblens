@@ -381,6 +381,7 @@ export default function EstudianteIncidentePage() {
 			setSubmitMessage("Error de conexion. Verifica tu red e intenta de nuevo.");
 		} finally {
 			setIsSubmitting(false);
+			router.push("/dashboard/estudiante");
 		}
 	}
 
