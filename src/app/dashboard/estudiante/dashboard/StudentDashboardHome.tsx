@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AuthData } from "@/utils/auth";
+import { useRouter } from "next/navigation";
 
 // Los props que recibe el componente
 type Props = {
@@ -49,6 +50,7 @@ const MOCK_INCIDENTS: IncidentMock[] = [
     status: "cerrado",
   },
 ];
+
 
 // Funcion para obtener el nombre del usuario desde su email
 function getFirstName(email: string): string {
@@ -161,6 +163,7 @@ export default function StudentDashboardHome({
   // Guard clause: si no hay sesión no renderiza nada
   const incidentsCount = "5";
   const suggestionsCount = "5";
+  const router = useRouter();
 
   if (!auth) return null;
 
@@ -313,8 +316,9 @@ export default function StudentDashboardHome({
                 {MOCK_INCIDENTS.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-b border-[var(--color-border-light)] last:border-0"
-                  >
+                    className="border-b border-[var(--color-border-light)] last:border-0 cursor-pointer"
+                    onClick={() => router.push(`/dashboard/estudiante/detalleIncidente/${row.id}`)}
+                  > {/*CAMBIAR RUTA POR LA PAGINA CORRESPONDIENTE A LOS DETALLES!!!!*/}
                     <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
                       {row.id}
                     </td>
