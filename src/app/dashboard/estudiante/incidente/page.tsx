@@ -8,6 +8,12 @@ import {
 	restoreAuthSession,
 	type AuthData,
 } from "@/utils/auth";
+import LocationField from "@/components/LocationField";
+
+type GpsCoordinates = {
+	latitude: number;
+	longitude: number;
+} | null;
 
 type IncidentErrors = {
 	title?: string;
@@ -69,7 +75,9 @@ export default function EstudianteIncidentePage() {
 
 	const [title, setTitle] = useState("");
 	const [category, setCategory] = useState("");
-	const [location, setLocation] = useState("");
+	const [locationZone, setLocationZone] = useState("");
+	const [locationDetail, setLocationDetail] = useState("");
+	const [gpsCoords, setGpsCoords] = useState<GpsCoordinates>(null);
 	const [description, setDescription] = useState("");
 	const [image, setImage] = useState<File | null>(null);
 	const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(CATEGORY_FALLBACK_OPTIONS);
@@ -188,7 +196,9 @@ export default function EstudianteIncidentePage() {
 	function resetForm() {
 		setTitle("");
 		setCategory("");
-		setLocation("");
+		setLocationZone("");
+		setLocationDetail("");
+		setGpsCoords(null);
 		setDescription("");
 		setImage(null);
 		setErrors({});
@@ -198,7 +208,6 @@ export default function EstudianteIncidentePage() {
 	function validateForm(): IncidentErrors {
 		const nextErrors: IncidentErrors = {};
 		const trimmedTitle = title.trim();
-		const trimmedLocation = location.trim();
 		const trimmedDescription = description.trim();
 
 		if (!trimmedTitle) {
@@ -211,10 +220,8 @@ export default function EstudianteIncidentePage() {
 			nextErrors.category = "Selecciona una categoria.";
 		}
 
-		if (!trimmedLocation) {
-			nextErrors.location = "La ubicacion es obligatoria.";
-		} else if (trimmedLocation.length < 3) {
-			nextErrors.location = "La ubicacion debe tener al menos 3 caracteres.";
+		if (!locationZone) {
+			nextErrors.location = "Selecciona una zona del campus.";
 		}
 
 		if (!trimmedDescription) {
@@ -351,6 +358,11 @@ export default function EstudianteIncidentePage() {
 		setErrors({});
 		setIsSubmitting(true);
 
+		// Construir descripción completa con el detalle de ubicación si existe
+		const fullDescription = locationDetail
+			? `${description.trim()} (Ubicación específica: ${locationDetail.trim()})`
+			: description.trim();
+
 		try {
 			const res = await fetch(`${API}/api/v1/incidents/`, {
 				method: "POST",
@@ -360,8 +372,10 @@ export default function EstudianteIncidentePage() {
 				},
 				body: JSON.stringify({
 					category_id: category,
-					description: description.trim(),
-					campus_place: location.trim() || null,
+					description: fullDescription,
+					campus_place: locationZone || null,
+					latitude: gpsCoords?.latitude ?? null,
+					longitude: gpsCoords?.longitude ?? null,
 				}),
 			});
 
@@ -465,28 +479,21 @@ export default function EstudianteIncidentePage() {
 								) : null}
 							</div>
 
-							<div className="field">
-								<label htmlFor="incident-location">Ubicacion</label>
-								<input
-									id="incident-location"
-									type="text"
-									placeholder="Ej: Bloque A - Salon 204"
-									value={location}
-									onChange={(event) => {
-										setLocation(event.target.value);
-										setSubmitMessage(null);
-										clearFieldError("location");
-									}}
-									aria-invalid={Boolean(errors.location)}
-									aria-describedby={errors.location ? "incident-location-error" : undefined}
-									className={errors.location ? "input-error" : ""}
-								/>
-								{errors.location ? (
-									<p id="incident-location-error" className="field-error-text">
-										{errors.location}
-									</p>
-								) : null}
-							</div>
+							<LocationField
+								zone={locationZone}
+								detail={locationDetail}
+								onZoneChange={(value) => {
+									setLocationZone(value);
+									setSubmitMessage(null);
+									clearFieldError("location");
+								}}
+								onDetailChange={(value) => {
+									setLocationDetail(value);
+									setSubmitMessage(null);
+								}}
+								onGpsChange={(coords) => setGpsCoords(coords)}
+								error={errors.location}
+							/>
 
 							<div className="field">
 								<label htmlFor="incident-description">Descripcion</label>
