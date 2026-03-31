@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { AuthData } from "@/utils/auth";
+import { IncidentStatusBadge } from "@/components/IncidentStatusBadge";
+import { IncidentStatus } from "@/utils/incidentStatus";
 import { AuthData, restoreAuthSession } from "@/utils/auth";
 import { useEffect, useState } from "react";
 
@@ -24,13 +27,13 @@ type Props = {
   isLoggingOut: boolean;
 };
 
-/** Filas de ejemplo */
+/** Filas de ejemplo - usando los estados reales del backend */
 type IncidentMock = {
   id: string;
   category: string;
   place: string;
   date: string;
-  status: "en_progreso" | "asignado" | "resuelto" | "cerrado";
+  status: IncidentStatus;
 };
 
 

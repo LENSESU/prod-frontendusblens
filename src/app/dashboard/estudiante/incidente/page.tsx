@@ -161,6 +161,9 @@ export default function EstudianteIncidentePage() {
 	}, [router]);
 
 	useEffect(() => {
+		// No cargar categorías hasta tener autenticación
+		if (!auth?.accessToken) return;
+
 		let isMounted = true;
 
 		if (isLoading) {
@@ -205,6 +208,7 @@ export default function EstudianteIncidentePage() {
 
 				if (!isMounted) return;
 				setCategoryOptions(parsedOptions);
+				setCategoriesLoadError(null);
 			} catch {
 				if (!isMounted) return;
 				setCategoryOptions(CATEGORY_FALLBACK_OPTIONS);
