@@ -8,6 +8,8 @@ import {
 	restoreAuthSession,
 	type AuthData,
 } from "@/utils/auth";
+import LocationField from "@/components/LocationField";
+import IncidentResponseModal from "@/components/IncidentResponseModal";
 
 type IncidentErrors = {
 	title?: string;
@@ -107,10 +109,14 @@ export default function EstudianteIncidentePage() {
 	const [categoriesLoadError, setCategoriesLoadError] = useState<string | null>(null);
 
 	const [errors, setErrors] = useState<IncidentErrors>({});
-	const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 	const [isCameraOpen, setIsCameraOpen] = useState(false);
 	const [isStartingCamera, setIsStartingCamera] = useState(false);
 	const [cameraError, setCameraError] = useState<string | null>(null);
+
+	// Modal state (replaces inline submitMessage)
+	const [modalOpen, setModalOpen] = useState(false);
+	const [modalMessage, setModalMessage] = useState("");
+	const [modalIsError, setModalIsError] = useState(false);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -240,7 +246,12 @@ export default function EstudianteIncidentePage() {
 		setDescription("");
 		setImage(null);
 		setErrors({});
-		setSubmitMessage(null);
+	}
+
+	function showModal(message: string, isError: boolean) {
+		setModalMessage(message);
+		setModalIsError(isError);
+		setModalOpen(true);
 	}
 
 	function validateForm(): IncidentErrors {
@@ -277,7 +288,6 @@ export default function EstudianteIncidentePage() {
 	function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
 		const selectedFile = event.target.files?.[0] ?? null;
 		setImage(selectedFile);
-		setSubmitMessage(null);
 		clearFieldError("image");
 	}
 
@@ -367,7 +377,6 @@ export default function EstudianteIncidentePage() {
 				});
 
 				setImage(capturedFile);
-				setSubmitMessage(null);
 				clearFieldError("image");
 				handleCloseCamera();
 			},
@@ -383,7 +392,6 @@ export default function EstudianteIncidentePage() {
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		setSubmitMessage(null);
 
 		const validationErrors = validateForm();
 		if (Object.values(validationErrors).some(Boolean)) {
@@ -392,7 +400,7 @@ export default function EstudianteIncidentePage() {
 		}
 
 		if (!auth?.accessToken || auth.accessToken === "dev-mock") {
-			setSubmitMessage("Debes iniciar sesion para enviar un incidente.");
+			showModal("Debes iniciar sesion para enviar un incidente.", true);
 			return;
 		}
 
@@ -433,26 +441,20 @@ export default function EstudianteIncidentePage() {
 			console.log("[INCIDENT][CREATE] status:", res.status, "ok:", res.ok, "payload:", backendPayload);
 
 			if (!res.ok) {
-				const error =
-					backendPayload && typeof backendPayload === "object"
-						? (backendPayload as { detail?: string | Array<{ msg?: string }> })
-						: null;
-				const validationMessage =
-					Array.isArray(error?.detail) && typeof error.detail[0]?.msg === "string"
-						? error.detail[0].msg
-						: null;
-				setSubmitMessage(
-					typeof error?.detail === "string"
+				const error = (await res.json()) as { detail?: string };
+				showModal(
+					typeof error.detail === "string"
 						? error.detail
-						: validationMessage ?? "No se pudo crear el incidente. Intenta de nuevo.",
+						: "No se pudo crear el incidente. Intenta de nuevo.",
+					true,
 				);
 				return;
 			}
 
 			resetForm();
-			setSubmitMessage("Incidente creado correctamente.");
+			showModal("Tu incidente fue registrado correctamente. El equipo de soporte lo revisará pronto.", false);
 		} catch {
-			setSubmitMessage("Error de conexion. Verifica tu red e intenta de nuevo.");
+			showModal("Error de conexion. Verifica tu red e intenta de nuevo.", true);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -474,18 +476,12 @@ export default function EstudianteIncidentePage() {
 							</p>
 						) : null}
 
-						{submitMessage ? (
-							<div className="alert-success" role="status">
-								<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-									<path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-								</svg>
-								<p>{submitMessage}</p>
-							</div>
-						) : null}
-
 						<form onSubmit={handleSubmit} noValidate>
+							{/* Titulo */}
 							<div className="field">
-								<label htmlFor="incident-title">Titulo del incidente</label>
+								<label htmlFor="incident-title">
+									Titulo del incidente <span className="field-required">*</span>
+								</label>
 								<input
 									id="incident-title"
 									type="text"
@@ -493,7 +489,6 @@ export default function EstudianteIncidentePage() {
 									value={title}
 									onChange={(event) => {
 										setTitle(event.target.value);
-										setSubmitMessage(null);
 										clearFieldError("title");
 									}}
 									aria-invalid={Boolean(errors.title)}
@@ -507,15 +502,17 @@ export default function EstudianteIncidentePage() {
 								) : null}
 							</div>
 
+							{/* Categoria */}
 							<div className="field">
-								<label htmlFor="incident-category">Categoria</label>
+								<label htmlFor="incident-category">
+									Categoria <span className="field-required">*</span>
+								</label>
 								<select
 									id="incident-category"
 									value={category}
 									disabled={isLoadingCategories}
 									onChange={(event) => {
 										setCategory(event.target.value);
-										setSubmitMessage(null);
 										clearFieldError("category");
 									}}
 									aria-invalid={Boolean(errors.category)}
@@ -531,7 +528,9 @@ export default function EstudianteIncidentePage() {
 										</option>
 									))}
 								</select>
-								{categoriesLoadError ? <p className="text-small text-secondary">{categoriesLoadError}</p> : null}
+								{categoriesLoadError ? (
+									<p className="text-small text-secondary">{categoriesLoadError}</p>
+								) : null}
 								{errors.category ? (
 									<p id="incident-category-error" className="field-error-text">
 										{errors.category}
@@ -539,38 +538,27 @@ export default function EstudianteIncidentePage() {
 								) : null}
 							</div>
 
-							<div className="field">
-								<label htmlFor="incident-location">Ubicacion</label>
-								<input
-									id="incident-location"
-									type="text"
-									placeholder="Ej: Bloque A - Salon 204"
-									value={location}
-									onChange={(event) => {
-										setLocation(event.target.value);
-										setSubmitMessage(null);
-										clearFieldError("location");
-									}}
-									aria-invalid={Boolean(errors.location)}
-									aria-describedby={errors.location ? "incident-location-error" : undefined}
-									className={errors.location ? "input-error" : ""}
-								/>
-								{errors.location ? (
-									<p id="incident-location-error" className="field-error-text">
-										{errors.location}
-									</p>
-								) : null}
-							</div>
+							{/* Ubicacion — componente dedicado */}
+							<LocationField
+								value={location}
+								onChange={(val) => {
+									setLocation(val);
+									clearFieldError("location");
+								}}
+								error={errors.location}
+							/>
 
+							{/* Descripcion */}
 							<div className="field">
-								<label htmlFor="incident-description">Descripcion</label>
+								<label htmlFor="incident-description">
+									Descripcion <span className="field-required">*</span>
+								</label>
 								<textarea
 									id="incident-description"
 									placeholder="Describe brevemente lo ocurrido..."
 									value={description}
 									onChange={(event) => {
 										setDescription(event.target.value);
-										setSubmitMessage(null);
 										clearFieldError("description");
 									}}
 									aria-invalid={Boolean(errors.description)}
@@ -584,6 +572,7 @@ export default function EstudianteIncidentePage() {
 								) : null}
 							</div>
 
+							{/* Imagen */}
 							<div className="field">
 								<label htmlFor="incident-image">Subir imagen</label>
 								<div className="input-wrap">
@@ -601,7 +590,7 @@ export default function EstudianteIncidentePage() {
 										type="button"
 										className="input-icon-right"
 										onClick={handleOpenCamera}
-										aria-label="Tomar foto o seleccionar archivo"
+										aria-label="Abrir camara"
 										disabled={isStartingCamera}
 									>
 										<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -612,7 +601,9 @@ export default function EstudianteIncidentePage() {
 								<button type="button" className="btn-link" onClick={handleOpenFilePicker}>
 									Subir archivo desde el dispositivo
 								</button>
-								{isStartingCamera ? <p className="text-small text-secondary">Abriendo camara...</p> : null}
+								{isStartingCamera ? (
+									<p className="text-small text-secondary">Abriendo camara...</p>
+								) : null}
 								{cameraError ? <p className="field-error-text">{cameraError}</p> : null}
 								{isCameraOpen ? (
 									<div className="field" aria-live="polite">
@@ -634,7 +625,9 @@ export default function EstudianteIncidentePage() {
 									onChange={handleImageChange}
 									hidden
 								/>
-								{image ? <p className="text-small text-secondary">Archivo: {image.name}</p> : null}
+								{image ? (
+									<p className="text-small text-secondary">Archivo: {image.name}</p>
+								) : null}
 								{errors.image ? (
 									<p id="incident-image-error" className="field-error-text">
 										{errors.image}
@@ -656,6 +649,14 @@ export default function EstudianteIncidentePage() {
 					© {new Date().getFullYear()} Universidad San Buenaventura Cali · USB LENS
 				</p>
 			</div>
+
+			{/* Modal de respuesta — fuera del card para overlay correcto */}
+			<IncidentResponseModal
+				open={modalOpen}
+				message={modalMessage}
+				isError={modalIsError}
+				onClose={() => setModalOpen(false)}
+			/>
 		</div>
 	);
 }

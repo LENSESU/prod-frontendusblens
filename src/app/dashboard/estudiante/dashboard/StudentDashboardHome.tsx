@@ -1,7 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { AuthData } from "@/utils/auth";
+import { AuthData, restoreAuthSession } from "@/utils/auth";
+import { useEffect, useState } from "react";
+
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+// función para sacar el userId del token
+function getUserIdFromToken(token: string) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.sub || payload.user_id || payload.id || null;
+  } catch {
+    return null;
+  }
+}
 
 // Los props que recibe el componente
 type Props = {
@@ -19,36 +33,7 @@ type IncidentMock = {
   status: "en_progreso" | "asignado" | "resuelto" | "cerrado";
 };
 
-const MOCK_INCIDENTS: IncidentMock[] = [
-  {
-    id: "#INC-042",
-    category: "Eléctrico",
-    place: "Cedro - 304",
-    date: "20 Feb 2026",
-    status: "en_progreso",
-  },
-  {
-    id: "#INC-041",
-    category: "Infraestructura",
-    place: "Biblioteca",
-    date: "18 Feb 2026",
-    status: "asignado",
-  },
-  {
-    id: "#INC-038",
-    category: "Seguridad",
-    place: "Entrada principal",
-    date: "12 Feb 2026",
-    status: "resuelto",
-  },
-  {
-    id: "#INC-035",
-    category: "Servicios",
-    place: "Cafetería",
-    date: "5 Feb 2026",
-    status: "cerrado",
-  },
-];
+
 
 // Funcion para obtener el nombre del usuario desde su email
 function getFirstName(email: string): string {
@@ -162,11 +147,84 @@ export default function StudentDashboardHome({
   onLogout,
   isLoggingOut,
 }: Props) {
-  // Guard clause: si no hay sesión no renderiza nada
-  const incidentsCount = "5";
+
+  // NUEVO STATE
+  const [incidents, setIncidents] = useState<IncidentMock[]>([]);
+
+  //  FETCH MINIMO
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const session = await restoreAuthSession();
+        if (!session?.accessToken) return;
+
+        const token = session.accessToken;
+        const userId = getUserIdFromToken(token);
+
+        const [incRes, catRes] = await Promise.all([
+          fetch(`${API}/api/v1/incidents/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API}/api/v1/categories/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        const incidentsData = await incRes.json();
+        const categoriesData = await catRes.json();
+
+        const incidentsArray = Array.isArray(incidentsData)
+          ? incidentsData
+          : incidentsData.items || [];
+
+        const categoriesArray = categoriesData.items || [];
+
+        const categoryMap: Record<string, string> = {};
+        categoriesArray.forEach((cat: any) => {
+          categoryMap[cat.id] = cat.name;
+        });
+
+        const filtered = incidentsArray.filter(
+          (i: any) => i.student_id === userId
+        );
+
+        const mapped: IncidentMock[] = filtered
+          .sort((a: Record<string, any>, b: Record<string, any>) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
+          .slice(0, 5)
+          .map((i: any) => ({
+            id: `#${i.id.slice(0, 8).toUpperCase()}`,
+            category: categoryMap[i.category_id] || "Sin categoría",
+            place: i.campus_place || "Sin ubicación",
+            date: new Date(i.created_at).toLocaleDateString(),
+            status:
+              i.status === "new"
+                ? "asignado"
+                : i.status === "en_progreso"
+                ? "en_progreso"
+                : i.status === "resuelto"
+                ? "resuelto"
+                : i.status === "cerrado"
+                ? "cerrado"
+                : "asignado",
+        }));
+
+        setIncidents(mapped);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  //  CONTADOR DINÁMICO
+  const incidentsCount = incidents.length.toString();
   const suggestionsCount = "5";
 
-  if (!auth) return null;
+  // Guard clause: si no hay sesión no renderiza nada
+  if (!auth) return <div>cargando...</div>;
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-4 pt-0 sm:p-6 lg:px-8">
@@ -277,11 +335,11 @@ export default function StudentDashboardHome({
             <h2 className="hidden min-w-0 flex-1 text-lg font-bold text-[var(--color-text-primary)] md:block">
               Mis Incidentes Recientes
             </h2>
-            <button
-              type="button"
-              className="btn-link !mt-0 inline-flex !w-auto shrink-0 items-center gap-1 text-left text-sm font-semibold"
-              aria-label="Ver todos los incidentes"
-            >
+            
+              <Link
+                href="/dashboard/estudiante/incident-list"
+                className="btn-link !mt-0 inline-flex !w-auto shrink-0 items-center gap-1 text-left text-sm font-semibold"
+              >
               Ver todo
               <svg
                 width="14"
@@ -298,7 +356,7 @@ export default function StudentDashboardHome({
                   d="M9 5l7 7-7 7"
                 />
               </svg>
-            </button>
+            </Link>
           </div>
 
           {/* Vista tabla: solo desde md (justify-between en barra superior; btn-link anulado con !w-auto en globals) */}
@@ -314,61 +372,62 @@ export default function StudentDashboardHome({
                 </tr>
               </thead>
               <tbody>
-                {MOCK_INCIDENTS.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-[var(--color-border-light)] last:border-0"
-                  >
-                    <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
-                      <Link
-                        href={getIncidentDetailHref(row.id)}
-                        className="no-underline hover:underline"
-                        aria-label={`Ver detalle del incidente ${row.id}`}
-                      >
-                        {row.id}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-3">{row.category}</td>
-                    <td className="px-3 py-3">{row.place}</td>
-                    <td className="px-3 py-3">
-                      <IncidentStatusBadge status={row.status} />
-                    </td>
-                    <td className="px-3 py-3 text-[var(--color-text-secondary)]">
-                      {row.date}
+                {incidents.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-3 py-4 text-center text-[var(--color-text-secondary)]"
+                    >
+                      No hay ningún incidente
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  incidents.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-b border-[var(--color-border-light)] last:border-0"
+                    >
+                      <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
+                        {row.id}
+                      </td>
+                      <td className="px-3 py-3">{row.category}</td>
+                      <td className="px-3 py-3">{row.place}</td>
+                      <td className="px-3 py-3">
+                        <IncidentStatusBadge status={row.status} />
+                      </td>
+                      <td className="px-3 py-3 text-[var(--color-text-secondary)]">
+                        {row.date}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Vista móvil: lista de tarjetas (misma data que MOCK_INCIDENTS) */}
           <ul className="flex flex-col divide-y divide-[var(--color-border-light)] md:hidden">
-            {MOCK_INCIDENTS.map((row) => (
-              <li key={`m-${row.id}`}>
-                <Link
-                  href={getIncidentDetailHref(row.id)}
-                  className="flex items-start gap-3 p-4 no-underline"
-                  aria-label={`Ver detalle del incidente ${row.id}`}
-                >
-                  <DocIconSmall />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[var(--color-primary)]">
-                      {row.id}
-                    </p>
-                    <p className="text-sm text-[var(--color-text-primary)]">
-                      {row.category}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[var(--color-text-hint)]">
-                      {row.place}
-                    </p>
-                  </div>
-                  <div className="shrink-0 self-center">
-                    <IncidentStatusBadge status={row.status} />
-                  </div>
-                </Link>
+            {incidents.length === 0 ? (
+              <li className="p-4 text-center text-[var(--color-text-secondary)]">
+                No hay ningún incidente
               </li>
-            ))}
+            ) : (
+              incidents.map((row) => (
+                <li key={`m-${row.id}`}>
+                  <div className="flex items-start gap-3 p-4">
+                    <DocIconSmall />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[var(--color-primary)]">{row.id}</p>
+                      <p className="text-sm text-[var(--color-text-primary)]">{row.category}</p>
+                      <p className="mt-0.5 text-xs text-[var(--color-text-hint)]">{row.place}</p>
+                    </div>
+                    <div className="shrink-0 self-center">
+                      <IncidentStatusBadge status={row.status} />
+                    </div>
+                  </div>
+                </li>
+              ))
+            )}
           </ul>
         </section>
 
