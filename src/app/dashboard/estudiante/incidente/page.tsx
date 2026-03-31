@@ -474,6 +474,7 @@ export default function EstudianteIncidentePage() {
 			showModal("Error de conexion. Verifica tu red e intenta de nuevo.", true);
 		} finally {
 			setIsSubmitting(false);
+			router.push("/dashboard/estudiante");
 		}
 	}
 
