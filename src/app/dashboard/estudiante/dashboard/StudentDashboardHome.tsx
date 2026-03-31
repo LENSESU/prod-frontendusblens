@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { AuthData } from "@/utils/auth";
+import { IncidentStatusBadge } from "@/components/IncidentStatusBadge";
+import { IncidentStatus } from "@/utils/incidentStatus";
 
 // Los props que recibe el componente
 type Props = {
@@ -10,13 +12,13 @@ type Props = {
   isLoggingOut: boolean;
 };
 
-/** Filas de ejemplo */
+/** Filas de ejemplo - usando los estados reales del backend */
 type IncidentMock = {
   id: string;
   category: string;
   place: string;
   date: string;
-  status: "en_progreso" | "asignado" | "resuelto" | "cerrado";
+  status: IncidentStatus;
 };
 
 const MOCK_INCIDENTS: IncidentMock[] = [
@@ -25,54 +27,34 @@ const MOCK_INCIDENTS: IncidentMock[] = [
     category: "Eléctrico",
     place: "Cedro - 304",
     date: "20 Feb 2026",
-    status: "en_progreso",
+    status: "Nuevo",
   },
   {
     id: "#INC-041",
     category: "Infraestructura",
     place: "Biblioteca",
     date: "18 Feb 2026",
-    status: "asignado",
+    status: "En_proceso",
   },
   {
     id: "#INC-038",
     category: "Seguridad",
     place: "Entrada principal",
     date: "12 Feb 2026",
-    status: "resuelto",
+    status: "Resuelto",
   },
   {
     id: "#INC-035",
     category: "Servicios",
     place: "Cafetería",
     date: "5 Feb 2026",
-    status: "cerrado",
+    status: "En_proceso",
   },
 ];
 
 // Funcion para obtener el nombre del usuario desde su email
 function getFirstName(email: string): string {
   return email.split("@")[0];
-}
-
-/** De acuerdo al estado de incidentes recientes se define el estado  (.badge, .badge-in-progress, etc.) */
-function IncidentStatusBadge({
-  status,
-}: {
-  status: IncidentMock["status"];
-}) {
-  switch (status) {
-    case "en_progreso":
-      return <span className="badge">En Progreso</span>;
-    case "asignado":
-      return <span className="badge badge-in-progress">Asignado</span>;
-    case "resuelto":
-      return <span className="badge badge-success">Resuelto</span>;
-    case "cerrado":
-      return <span className="badge badge-closed">Cerrado</span>;
-    default:
-      return null;
-  }
 }
 
 /** Icono documento en caja (tarjetas de resumen: esquina superior derecha en el mock) */

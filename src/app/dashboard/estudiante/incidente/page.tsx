@@ -126,6 +126,9 @@ export default function EstudianteIncidentePage() {
 	}, [router]);
 
 	useEffect(() => {
+		// No cargar categorías hasta tener autenticación
+		if (!auth?.accessToken) return;
+
 		let isMounted = true;
 
 		async function loadCategories() {
@@ -135,7 +138,10 @@ export default function EstudianteIncidentePage() {
 			try {
 				const response = await fetch(`${API}/api/v1/categories/`, {
 					method: "GET",
-					headers: { "Content-Type": "application/json" },
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${auth.accessToken}`,
+					},
 				});
 
 				if (!response.ok) {
@@ -151,6 +157,7 @@ export default function EstudianteIncidentePage() {
 
 				if (!isMounted) return;
 				setCategoryOptions(parsedOptions);
+				setCategoriesLoadError(null);
 			} catch {
 				if (!isMounted) return;
 				setCategoryOptions(CATEGORY_FALLBACK_OPTIONS);
@@ -167,7 +174,7 @@ export default function EstudianteIncidentePage() {
 		return () => {
 			isMounted = false;
 		};
-	}, []);
+	}, [auth?.accessToken]);
 
 	useEffect(() => {
 		return () => {
@@ -467,10 +474,8 @@ export default function EstudianteIncidentePage() {
 
 							<div className="field">
 								<label htmlFor="incident-location">Ubicacion</label>
-								<input
+								<select
 									id="incident-location"
-									type="text"
-									placeholder="Ej: Bloque A - Salon 204"
 									value={location}
 									onChange={(event) => {
 										setLocation(event.target.value);
@@ -480,7 +485,20 @@ export default function EstudianteIncidentePage() {
 									aria-invalid={Boolean(errors.location)}
 									aria-describedby={errors.location ? "incident-location-error" : undefined}
 									className={errors.location ? "input-error" : ""}
-								/>
+								>
+									<option value="">Selecciona una ubicación</option>
+									<option value="Biblioteca">Biblioteca</option>
+									<option value="Lago">Lago</option>
+									<option value="Cedro">Cedro</option>
+									<option value="Central">Central</option>
+									<option value="Farrallones">Farrallones</option>
+									<option value="Parqueadero_estudiantes">Parqueadero Estudiantes</option>
+									<option value="Parque tecnologico">Parque Tecnológico</option>
+									<option value="Naranjos">Naranjos</option>
+									<option value="Higuerones">Higuerones</option>
+									<option value="Cancha">Cancha</option>
+									<option value="Otros">Otros</option>
+								</select>
 								{errors.location ? (
 									<p id="incident-location-error" className="field-error-text">
 										{errors.location}
