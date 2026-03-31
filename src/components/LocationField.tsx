@@ -217,6 +217,66 @@ export default function LocationField({
 					textAlign: "center",
 				}}>
 					📍 Coordenadas: {gpsCoords.latitude.toFixed(6)}, {gpsCoords.longitude.toFixed(6)}
+			{/* Botón GPS */}
+			<button
+				type="button"
+				className="btn-gps"
+				onClick={captureGps}
+				disabled={gpsStatus === "loading"}
+				style={{
+					marginTop: "0.5rem",
+					display: "flex",
+					alignItems: "center",
+					gap: "0.5rem",
+					padding: "0.5rem 1rem",
+					fontSize: "0.875rem",
+					border: "1px solid var(--color-border)",
+					borderRadius: "0.5rem",
+					background: gpsStatus === "success" ? "var(--color-success-bg)" : "var(--color-bg-muted)",
+					color: gpsStatus === "success" ? "var(--color-success)" : "var(--color-text-secondary)",
+					cursor: gpsStatus === "loading" ? "wait" : "pointer",
+				}}
+			>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+					<path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+					<path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+				</svg>
+				{gpsStatus === "idle" && "📍 Capturar mi ubicación GPS"}
+				{gpsStatus === "loading" && "Obteniendo ubicación..."}
+				{gpsStatus === "success" && "✅ Ubicación capturada"}
+				{gpsStatus === "error" && "❌ No se pudo obtener GPS - Intenta de nuevo"}
+			</button>
+
+			{/* Mini mapa OpenStreetMap */}
+			{gpsStatus === "success" && gpsCoords && (
+				<div
+					style={{
+						marginTop: "0.75rem",
+						borderRadius: "0.5rem",
+						overflow: "hidden",
+						border: "1px solid var(--color-border)",
+					}}
+				>
+					<iframe
+						title="Ubicación en el mapa"
+						width="100%"
+						height="200"
+						style={{ border: 0, display: "block" }}
+						src={getMapUrl(gpsCoords.latitude, gpsCoords.longitude)}
+						allowFullScreen={false}
+						loading="lazy"
+					/>
+					<div
+						style={{
+							padding: "0.5rem",
+							background: "var(--color-bg-muted)",
+							fontSize: "0.75rem",
+							color: "var(--color-text-secondary)",
+							textAlign: "center",
+						}}
+					>
+						📍 {gpsCoords.latitude.toFixed(6)}, {gpsCoords.longitude.toFixed(6)}
+					</div>
 				</div>
 			)}
 

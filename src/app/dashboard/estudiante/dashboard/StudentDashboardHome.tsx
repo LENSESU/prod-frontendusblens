@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { AuthData } from "@/utils/auth";
+import { useRouter } from "next/navigation";
+import { IncidentStatusBadge } from "@/components/IncidentStatusBadge";
+import { IncidentStatus } from "@/utils/incidentStatus";
 import { AuthData, restoreAuthSession } from "@/utils/auth";
 import { useEffect, useState } from "react";
 
@@ -24,14 +28,15 @@ type Props = {
   isLoggingOut: boolean;
 };
 
-/** Filas de ejemplo */
+/** Filas de ejemplo - usando los estados reales del backend */
 type IncidentMock = {
   id: string;
   category: string;
   place: string;
   date: string;
-  status: "en_progreso" | "asignado" | "resuelto" | "cerrado";
+  status: IncidentStatus;
 };
+
 
 
 
@@ -222,6 +227,20 @@ export default function StudentDashboardHome({
   //  CONTADOR DINÁMICO
   const incidentsCount = incidents.length.toString();
   const suggestionsCount = "5";
+  const router = useRouter();
+  const [loadingIncidents, setLoadingIncidents] = useState(true);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoadingIncidents(false), 1500); // Esto se tiene que cambiar por el fetch
+    return () => clearTimeout(t); // Lo mismo
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoadingSuggestions(false), 1500); // Esto se tiene que cambiar por el fetch
+    return () => clearTimeout(t); // Lo mismo
+  }, []);
+
 
   // Guard clause: si no hay sesión no renderiza nada
   if (!auth) return <div>cargando...</div>;
@@ -231,7 +250,7 @@ export default function StudentDashboardHome({
       {/* === Sección: cabecera del panel — md+: fila clásica; móvil: barra blanca (título centrado) + franja saludo + FAB === */}
       {/* FILA 1: Header */}
       <header className="mb-6 sm:mb-8">
-        
+
         {/* Vista móvil: barra superior blanca + franja gris con saludo (mock); el icono de menú es solo visual (sidebar no va aquí) */}
         <div className="-mx-4 mb-4 md:hidden">
           <div className="border-b border-[var(--color-border-light)] bg-white px-4 py-3">
@@ -372,20 +391,24 @@ export default function StudentDashboardHome({
                 </tr>
               </thead>
               <tbody>
-                {incidents.length === 0 ? (
+                {loadingIncidents ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-3 py-4 text-center text-[var(--color-text-secondary)]"
-                    >
-                      No hay ningún incidente
+                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                      Cargando...
+                    </td>
+                  </tr>
+                ) : incidents.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                      No tienes incidentes registrados aún.
                     </td>
                   </tr>
                 ) : (
                   incidents.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-[var(--color-border-light)] last:border-0"
+                      className="border-b border-[var(--color-border-light)] last:border-0 cursor-pointer"
+                      onClick={() => router.push(`/dashboard/estudiante/detalleIncidente/${row.id}`) /*Cambiar por la ruta correspondiente a la pagina*/}
                     >
                       <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
                         {row.id}
@@ -407,13 +430,17 @@ export default function StudentDashboardHome({
 
           {/* Vista móvil: lista de tarjetas (misma data que MOCK_INCIDENTS) */}
           <ul className="flex flex-col divide-y divide-[var(--color-border-light)] md:hidden">
-            {incidents.length === 0 ? (
-              <li className="p-4 text-center text-[var(--color-text-secondary)]">
-                No hay ningún incidente
+            {loadingIncidents ? (
+              <li className="px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                Cargando...
+              </li>
+            ) : incidents.length === 0 ? ( // Cambiar MOCK_INCIDENTS por la variable que se use para los datos de la BD en su momento
+              <li className="px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                No tienes incidentes registrados aún.
               </li>
             ) : (
               incidents.map((row) => (
-                <li key={`m-${row.id}`}>
+                <li key={`m-${row.id}`} onClick={() => router.push(`/dashboard/estudiante/detalleIncidente/${row.id}`) /*Cambiar por la ruta correspondiente a la pagina*/}>
                   <div className="flex items-start gap-3 p-4">
                     <DocIconSmall />
                     <div className="min-w-0 flex-1">
@@ -439,7 +466,15 @@ export default function StudentDashboardHome({
             </h2>
           </div>
           <div className="p-3 text-sm text-[var(--color-text-secondary)] sm:p-4">
-            <div className="flex flex-col gap-3">
+            {loadingSuggestions ? (
+              <p className="py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                Cargando...
+              </p>
+            ) : false ? ( // Cambiar por la variable que almacene la longitud de las sugerencias
+              <p className="py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                No hay sugerencias populares por el momento.
+              </p>
+            ) : /*Agregar el map de las sugerencias cuando existan */(<div className="flex flex-col gap-3"> 
               {/* ITEM */}
               <div className="flex items-center gap-3 card-clickable rounded-lg border-b border-[var(--color-border-light)] p-3">
                 {/* VOTOS */}
@@ -523,7 +558,9 @@ export default function StudentDashboardHome({
                   </div>
                 </div>
               </div>
-            </div>
+            </div>)
+
+            }
           </div>
         </section>
       </div>
