@@ -29,6 +29,35 @@ const CATEGORY_FALLBACK_OPTIONS: CategoryOption[] = [
 	{ id: "", name: "Otro" },
 ];
 
+const CAMPUS_OPTIONS = [
+	"Biblioteca",
+	"Lago",
+	"Cedro",
+	"Central",
+	"Farrallones",
+	"Parqueadero_estudiantes",
+	"Parque tecnologico",
+	"Naranjos",
+	"Higuerones",
+	"Cancha",
+	"Otros",
+];
+
+function normalizeCampusName(value: string): string {
+	return value.trim().toLowerCase().replaceAll("_", " ").replace(/\s+/g, " ");
+}
+
+function normalizeCampusPlace(value: string): string | null {
+	const normalizedValue = normalizeCampusName(value);
+	if (!normalizedValue) return null;
+
+	const matchedCampus = CAMPUS_OPTIONS.find(
+		(campus) => normalizeCampusName(campus) === normalizedValue,
+	);
+
+	return matchedCampus ?? null;
+}
+
 function parseCategoryOptions(payload: unknown): CategoryOption[] {
 	let source: unknown[] = [];
 
@@ -128,6 +157,22 @@ export default function EstudianteIncidentePage() {
 	useEffect(() => {
 		let isMounted = true;
 
+		if (isLoading) {
+			return () => {
+				isMounted = false;
+			};
+		}
+
+		const token = auth?.accessToken;
+		if (!token || token === "dev-mock") {
+			setCategoryOptions(CATEGORY_FALLBACK_OPTIONS);
+			setCategoriesLoadError("Inicia sesion para cargar categorias del backend.");
+			setIsLoadingCategories(false);
+			return () => {
+				isMounted = false;
+			};
+		}
+
 		async function loadCategories() {
 			setIsLoadingCategories(true);
 			setCategoriesLoadError(null);
@@ -135,7 +180,10 @@ export default function EstudianteIncidentePage() {
 			try {
 				const response = await fetch(`${API}/api/v1/categories/`, {
 					method: "GET",
-					headers: { "Content-Type": "application/json" },
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
 				});
 
 				if (!response.ok) {
@@ -167,7 +215,7 @@ export default function EstudianteIncidentePage() {
 		return () => {
 			isMounted = false;
 		};
-	}, []);
+	}, [auth, isLoading]);
 
 	useEffect(() => {
 		return () => {
@@ -352,6 +400,12 @@ export default function EstudianteIncidentePage() {
 		setIsSubmitting(true);
 
 		try {
+			const normalizedCampusPlace = normalizeCampusPlace(location.trim());
+			const finalDescription =
+				normalizedCampusPlace || !location.trim()
+					? description.trim()
+					: `${description.trim()}\n\nUbicacion reportada: ${location.trim()}`;
+
 			const res = await fetch(`${API}/api/v1/incidents/`, {
 				method: "POST",
 				headers: {
@@ -360,17 +414,37 @@ export default function EstudianteIncidentePage() {
 				},
 				body: JSON.stringify({
 					category_id: category,
-					description: description.trim(),
-					campus_place: location.trim() || null,
+					description: finalDescription,
+					campus_place: normalizedCampusPlace,
 				}),
 			});
 
+			const rawResponse = await res.text();
+			let backendPayload: unknown = null;
+
+			if (rawResponse) {
+				try {
+					backendPayload = JSON.parse(rawResponse) as unknown;
+				} catch {
+					backendPayload = rawResponse;
+				}
+			}
+
+			console.log("[INCIDENT][CREATE] status:", res.status, "ok:", res.ok, "payload:", backendPayload);
+
 			if (!res.ok) {
-				const error = (await res.json()) as { detail?: string };
+				const error =
+					backendPayload && typeof backendPayload === "object"
+						? (backendPayload as { detail?: string | Array<{ msg?: string }> })
+						: null;
+				const validationMessage =
+					Array.isArray(error?.detail) && typeof error.detail[0]?.msg === "string"
+						? error.detail[0].msg
+						: null;
 				setSubmitMessage(
-					typeof error.detail === "string"
+					typeof error?.detail === "string"
 						? error.detail
-						: "No se pudo crear el incidente. Intenta de nuevo.",
+						: validationMessage ?? "No se pudo crear el incidente. Intenta de nuevo.",
 				);
 				return;
 			}

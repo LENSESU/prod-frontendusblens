@@ -55,6 +55,10 @@ function getFirstName(email: string): string {
   return email.split("@")[0];
 }
 
+function getIncidentDetailHref(incidentId: string): string {
+  return `/dashboard/estudiante/dashboard/incidente-detalle?incident=${encodeURIComponent(incidentId)}`;
+}
+
 /** De acuerdo al estado de incidentes recientes se define el estado  (.badge, .badge-in-progress, etc.) */
 function IncidentStatusBadge({
   status,
@@ -316,7 +320,13 @@ export default function StudentDashboardHome({
                     className="border-b border-[var(--color-border-light)] last:border-0"
                   >
                     <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
-                      {row.id}
+                      <Link
+                        href={getIncidentDetailHref(row.id)}
+                        className="no-underline hover:underline"
+                        aria-label={`Ver detalle del incidente ${row.id}`}
+                      >
+                        {row.id}
+                      </Link>
                     </td>
                     <td className="px-3 py-3">{row.category}</td>
                     <td className="px-3 py-3">{row.place}</td>
@@ -336,7 +346,11 @@ export default function StudentDashboardHome({
           <ul className="flex flex-col divide-y divide-[var(--color-border-light)] md:hidden">
             {MOCK_INCIDENTS.map((row) => (
               <li key={`m-${row.id}`}>
-                <div className="flex items-start gap-3 p-4">
+                <Link
+                  href={getIncidentDetailHref(row.id)}
+                  className="flex items-start gap-3 p-4 no-underline"
+                  aria-label={`Ver detalle del incidente ${row.id}`}
+                >
                   <DocIconSmall />
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-[var(--color-primary)]">
@@ -352,7 +366,7 @@ export default function StudentDashboardHome({
                   <div className="shrink-0 self-center">
                     <IncidentStatusBadge status={row.status} />
                   </div>
-                </div>
+                </Link>
               </li>
             ))}
           </ul>
