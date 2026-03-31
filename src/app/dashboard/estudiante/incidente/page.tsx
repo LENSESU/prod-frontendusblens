@@ -14,6 +14,7 @@ type GpsCoordinates = {
 	latitude: number;
 	longitude: number;
 } | null;
+import IncidentResponseModal from "@/components/IncidentResponseModal";
 
 type IncidentErrors = {
 	title?: string;
@@ -34,6 +35,35 @@ const CATEGORY_FALLBACK_OPTIONS: CategoryOption[] = [
 	{ id: "", name: "Servicios" },
 	{ id: "", name: "Otro" },
 ];
+
+const CAMPUS_OPTIONS = [
+	"Biblioteca",
+	"Lago",
+	"Cedro",
+	"Central",
+	"Farrallones",
+	"Parqueadero_estudiantes",
+	"Parque tecnologico",
+	"Naranjos",
+	"Higuerones",
+	"Cancha",
+	"Otros",
+];
+
+function normalizeCampusName(value: string): string {
+	return value.trim().toLowerCase().replaceAll("_", " ").replace(/\s+/g, " ");
+}
+
+function normalizeCampusPlace(value: string): string | null {
+	const normalizedValue = normalizeCampusName(value);
+	if (!normalizedValue) return null;
+
+	const matchedCampus = CAMPUS_OPTIONS.find(
+		(campus) => normalizeCampusName(campus) === normalizedValue,
+	);
+
+	return matchedCampus ?? null;
+}
 
 function parseCategoryOptions(payload: unknown): CategoryOption[] {
 	let source: unknown[] = [];
@@ -86,10 +116,14 @@ export default function EstudianteIncidentePage() {
 	const [categoriesLoadError, setCategoriesLoadError] = useState<string | null>(null);
 
 	const [errors, setErrors] = useState<IncidentErrors>({});
-	const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 	const [isCameraOpen, setIsCameraOpen] = useState(false);
 	const [isStartingCamera, setIsStartingCamera] = useState(false);
 	const [cameraError, setCameraError] = useState<string | null>(null);
+
+	// Modal state (replaces inline submitMessage)
+	const [modalOpen, setModalOpen] = useState(false);
+	const [modalMessage, setModalMessage] = useState("");
+	const [modalIsError, setModalIsError] = useState(false);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -136,6 +170,22 @@ export default function EstudianteIncidentePage() {
 	useEffect(() => {
 		let isMounted = true;
 
+		if (isLoading) {
+			return () => {
+				isMounted = false;
+			};
+		}
+
+		const token = auth?.accessToken;
+		if (!token || token === "dev-mock") {
+			setCategoryOptions(CATEGORY_FALLBACK_OPTIONS);
+			setCategoriesLoadError("Inicia sesion para cargar categorias del backend.");
+			setIsLoadingCategories(false);
+			return () => {
+				isMounted = false;
+			};
+		}
+
 		async function loadCategories() {
 			setIsLoadingCategories(true);
 			setCategoriesLoadError(null);
@@ -143,7 +193,10 @@ export default function EstudianteIncidentePage() {
 			try {
 				const response = await fetch(`${API}/api/v1/categories/`, {
 					method: "GET",
-					headers: { "Content-Type": "application/json" },
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
 				});
 
 				if (!response.ok) {
@@ -175,7 +228,7 @@ export default function EstudianteIncidentePage() {
 		return () => {
 			isMounted = false;
 		};
-	}, []);
+	}, [auth, isLoading]);
 
 	useEffect(() => {
 		return () => {
@@ -202,7 +255,12 @@ export default function EstudianteIncidentePage() {
 		setDescription("");
 		setImage(null);
 		setErrors({});
-		setSubmitMessage(null);
+	}
+
+	function showModal(message: string, isError: boolean) {
+		setModalMessage(message);
+		setModalIsError(isError);
+		setModalOpen(true);
 	}
 
 	function validateForm(): IncidentErrors {
@@ -236,7 +294,6 @@ export default function EstudianteIncidentePage() {
 	function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
 		const selectedFile = event.target.files?.[0] ?? null;
 		setImage(selectedFile);
-		setSubmitMessage(null);
 		clearFieldError("image");
 	}
 
@@ -326,7 +383,6 @@ export default function EstudianteIncidentePage() {
 				});
 
 				setImage(capturedFile);
-				setSubmitMessage(null);
 				clearFieldError("image");
 				handleCloseCamera();
 			},
@@ -342,7 +398,6 @@ export default function EstudianteIncidentePage() {
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		setSubmitMessage(null);
 
 		const validationErrors = validateForm();
 		if (Object.values(validationErrors).some(Boolean)) {
@@ -351,7 +406,7 @@ export default function EstudianteIncidentePage() {
 		}
 
 		if (!auth?.accessToken || auth.accessToken === "dev-mock") {
-			setSubmitMessage("Debes iniciar sesion para enviar un incidente.");
+			showModal("Debes iniciar sesion para enviar un incidente.", true);
 			return;
 		}
 
@@ -364,6 +419,12 @@ export default function EstudianteIncidentePage() {
 			: description.trim();
 
 		try {
+			const normalizedCampusPlace = normalizeCampusPlace(location.trim());
+			const finalDescription =
+				normalizedCampusPlace || !location.trim()
+					? description.trim()
+					: `${description.trim()}\n\nUbicacion reportada: ${location.trim()}`;
+
 			const res = await fetch(`${API}/api/v1/incidents/`, {
 				method: "POST",
 				headers: {
@@ -379,20 +440,34 @@ export default function EstudianteIncidentePage() {
 				}),
 			});
 
+			const rawResponse = await res.text();
+			let backendPayload: unknown = null;
+
+			if (rawResponse) {
+				try {
+					backendPayload = JSON.parse(rawResponse) as unknown;
+				} catch {
+					backendPayload = rawResponse;
+				}
+			}
+
+			console.log("[INCIDENT][CREATE] status:", res.status, "ok:", res.ok, "payload:", backendPayload);
+
 			if (!res.ok) {
 				const error = (await res.json()) as { detail?: string };
-				setSubmitMessage(
+				showModal(
 					typeof error.detail === "string"
 						? error.detail
 						: "No se pudo crear el incidente. Intenta de nuevo.",
+					true,
 				);
 				return;
 			}
 
 			resetForm();
-			setSubmitMessage("Incidente creado correctamente.");
+			showModal("Tu incidente fue registrado correctamente. El equipo de soporte lo revisará pronto.", false);
 		} catch {
-			setSubmitMessage("Error de conexion. Verifica tu red e intenta de nuevo.");
+			showModal("Error de conexion. Verifica tu red e intenta de nuevo.", true);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -414,18 +489,12 @@ export default function EstudianteIncidentePage() {
 							</p>
 						) : null}
 
-						{submitMessage ? (
-							<div className="alert-success" role="status">
-								<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-									<path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-								</svg>
-								<p>{submitMessage}</p>
-							</div>
-						) : null}
-
 						<form onSubmit={handleSubmit} noValidate>
+							{/* Titulo */}
 							<div className="field">
-								<label htmlFor="incident-title">Titulo del incidente</label>
+								<label htmlFor="incident-title">
+									Titulo del incidente <span className="field-required">*</span>
+								</label>
 								<input
 									id="incident-title"
 									type="text"
@@ -433,7 +502,6 @@ export default function EstudianteIncidentePage() {
 									value={title}
 									onChange={(event) => {
 										setTitle(event.target.value);
-										setSubmitMessage(null);
 										clearFieldError("title");
 									}}
 									aria-invalid={Boolean(errors.title)}
@@ -447,15 +515,17 @@ export default function EstudianteIncidentePage() {
 								) : null}
 							</div>
 
+							{/* Categoria */}
 							<div className="field">
-								<label htmlFor="incident-category">Categoria</label>
+								<label htmlFor="incident-category">
+									Categoria <span className="field-required">*</span>
+								</label>
 								<select
 									id="incident-category"
 									value={category}
 									disabled={isLoadingCategories}
 									onChange={(event) => {
 										setCategory(event.target.value);
-										setSubmitMessage(null);
 										clearFieldError("category");
 									}}
 									aria-invalid={Boolean(errors.category)}
@@ -471,7 +541,9 @@ export default function EstudianteIncidentePage() {
 										</option>
 									))}
 								</select>
-								{categoriesLoadError ? <p className="text-small text-secondary">{categoriesLoadError}</p> : null}
+								{categoriesLoadError ? (
+									<p className="text-small text-secondary">{categoriesLoadError}</p>
+								) : null}
 								{errors.category ? (
 									<p id="incident-category-error" className="field-error-text">
 										{errors.category}
@@ -503,7 +575,6 @@ export default function EstudianteIncidentePage() {
 									value={description}
 									onChange={(event) => {
 										setDescription(event.target.value);
-										setSubmitMessage(null);
 										clearFieldError("description");
 									}}
 									aria-invalid={Boolean(errors.description)}
@@ -517,6 +588,7 @@ export default function EstudianteIncidentePage() {
 								) : null}
 							</div>
 
+							{/* Imagen */}
 							<div className="field">
 								<label htmlFor="incident-image">Subir imagen</label>
 								<div className="input-wrap">
@@ -534,7 +606,7 @@ export default function EstudianteIncidentePage() {
 										type="button"
 										className="input-icon-right"
 										onClick={handleOpenCamera}
-										aria-label="Tomar foto o seleccionar archivo"
+										aria-label="Abrir camara"
 										disabled={isStartingCamera}
 									>
 										<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -545,7 +617,9 @@ export default function EstudianteIncidentePage() {
 								<button type="button" className="btn-link" onClick={handleOpenFilePicker}>
 									Subir archivo desde el dispositivo
 								</button>
-								{isStartingCamera ? <p className="text-small text-secondary">Abriendo camara...</p> : null}
+								{isStartingCamera ? (
+									<p className="text-small text-secondary">Abriendo camara...</p>
+								) : null}
 								{cameraError ? <p className="field-error-text">{cameraError}</p> : null}
 								{isCameraOpen ? (
 									<div className="field" aria-live="polite">
@@ -567,7 +641,9 @@ export default function EstudianteIncidentePage() {
 									onChange={handleImageChange}
 									hidden
 								/>
-								{image ? <p className="text-small text-secondary">Archivo: {image.name}</p> : null}
+								{image ? (
+									<p className="text-small text-secondary">Archivo: {image.name}</p>
+								) : null}
 								{errors.image ? (
 									<p id="incident-image-error" className="field-error-text">
 										{errors.image}
@@ -589,6 +665,14 @@ export default function EstudianteIncidentePage() {
 					© {new Date().getFullYear()} Universidad San Buenaventura Cali · USB LENS
 				</p>
 			</div>
+
+			{/* Modal de respuesta — fuera del card para overlay correcto */}
+			<IncidentResponseModal
+				open={modalOpen}
+				message={modalMessage}
+				isError={modalIsError}
+				onClose={() => setModalOpen(false)}
+			/>
 		</div>
 	);
 }
