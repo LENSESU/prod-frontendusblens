@@ -44,6 +44,8 @@ Este proyecto usa las siguientes dependencias clave:
 
 - **next**: framework principal para el frontend.
 - **react / react-dom**: librería de UI y renderizado.
+- **leaflet** y **react-leaflet**: mapa interactivo para selección y visualización de ubicaciones de incidentes.
+- **@types/leaflet**: tipos de TypeScript para Leaflet.
 - **tailwindcss**: librería de estilos utilitarios.
 - **eslint** y **eslint-config-next**: reglas de linting para mantener un código consistente.
 - **typescript**: tipado estático para el proyecto.
@@ -182,19 +184,45 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 La estructura ya está creada. Cada quien trabaja **únicamente en su carpeta asignada**. No renombres archivos ni crees carpetas nuevas sin avisar.
 
 ```
-src/app/
-├── globals.css               ← estilos globales, NO tocar sin avisar al equipo
-├── layout.tsx
-├── page.tsx                  ← pantalla de selección de rol
-├── login/
-│   ├── admin/page.tsx        ← login admin/técnico
-│   ├── estudiante/page.tsx   ← login estudiante OTP
-│   └── tecnico/page.tsx
-└── dashboard/
-    ├── admin/page.tsx
-    ├── estudiante/page.tsx
-    └── tecnico/page.tsx
-    ...
+src/
+├── app/
+│   ├── globals.css                                      ← estilos globales, NO tocar sin avisar al equipo
+│   ├── layout.tsx
+│   ├── page.tsx                                         ← pantalla de selección de rol
+│   ├── login/
+│   │   ├── estudiante/page.tsx                          ← login estudiante OTP
+│   │   └── personal/page.tsx                            ← login admin/técnico
+│   ├── loginAdmin/page.tsx
+│   ├── loginTec/page.tsx
+│   ├── register/
+│   │   └── estudiante/page.tsx                          ← registro de estudiantes
+│   ├── verify-code/page.tsx                             ← verificación OTP
+│   └── dashboard/
+│       ├── admin/page.tsx
+│       ├── tecnico/page.tsx
+│       └── estudiante/
+│           ├── layout.tsx
+│           ├── page.tsx
+│           ├── dashboard/
+│           │   ├── StudentDashboardHome.tsx
+│           │   └── incidente-detalle/page.tsx
+│           ├── incidente/page.tsx                       ← reporte de nuevo incidente
+│           ├── incident-list/page.tsx                   ← listado de incidentes
+│           └── reportes/page.tsx
+├── components/
+│   ├── AuthProvider.tsx                                 ← contexto de autenticación
+│   ├── CodeInput.tsx                                    ← input para código OTP
+│   ├── IncidentResponseModal.tsx                        ← modal de respuesta a incidentes
+│   ├── IncidentStatusBadge.tsx                          ← badge de estado de incidente
+│   ├── InteractiveMap.tsx                               ← mapa interactivo (Leaflet)
+│   ├── LocationField.tsx                                ← campo de selección de ubicación en mapa
+│   ├── ProtectedDashboard.tsx                           ← wrapper de rutas protegidas
+│   ├── StaffLoginForm.tsx                               ← formulario de login para staff
+│   └── StudentSidebar.tsx                               ← sidebar del dashboard estudiantil
+└── utils/
+    ├── auth.ts                                          ← utilidades de autenticación
+    ├── incidentStatus.ts                                ← helpers de estado de incidentes
+    └── jwt.ts                                           ← manejo de JWT
 ```
 
 Los archivos se llaman `page.tsx` porque Next.js define las rutas por carpeta, no por nombre de archivo. Si el archivo no se llama exactamente `page.tsx`, la ruta no existe.
