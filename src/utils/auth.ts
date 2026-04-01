@@ -207,19 +207,27 @@ export async function logoutSession(): Promise<void> {
  */
 export async function restoreAuthSession(): Promise<AuthData | null> {
   const auth = getAuth();
-
   if (!auth?.accessToken) return null;
 
-  const isValid = await validateAccessToken(auth.accessToken);
-  if (isValid) return auth;
+  // Verificar expiración localmente, sin llamada al backend
+  try {
+    const payload = JSON.parse(atob(auth.accessToken.split(".")[1]));
+    const exp = payload.exp;
+    const isExpired = exp && Date.now() / 1000 > exp;
 
+    if (!isExpired) return auth;
+
+  } catch {
+    // token malformado, intentar refresh
+  }
+
+  // Token expirado → intentar refresh
   if (!auth.refreshToken) {
     clearAuth();
     return null;
   }
 
   const refreshed = await refreshAccessToken(auth.refreshToken);
-
   if (!refreshed?.access_token) {
     clearAuth();
     return null;
