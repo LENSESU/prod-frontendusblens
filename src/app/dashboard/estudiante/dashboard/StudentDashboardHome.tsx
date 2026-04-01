@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AuthData } from "@/utils/auth";
+import { AuthData, restoreAuthSession } from "@/utils/auth";
 import { useRouter } from "next/navigation";
 import { IncidentStatusBadge } from "@/components/IncidentStatusBadge";
 import { IncidentStatus } from "@/utils/incidentStatus";
-import { AuthData, restoreAuthSession } from "@/utils/auth";
 import { useEffect, useState } from "react";
 
 
@@ -47,26 +46,6 @@ function getFirstName(email: string): string {
 
 function getIncidentDetailHref(incidentId: string): string {
   return `/dashboard/estudiante/dashboard/incidente-detalle?incident=${encodeURIComponent(incidentId)}`;
-}
-
-/** De acuerdo al estado de incidentes recientes se define el estado  (.badge, .badge-in-progress, etc.) */
-function IncidentStatusBadge({
-  status,
-}: {
-  status: IncidentMock["status"];
-}) {
-  switch (status) {
-    case "en_progreso":
-      return <span className="badge">En Progreso</span>;
-    case "asignado":
-      return <span className="badge badge-in-progress">Asignado</span>;
-    case "resuelto":
-      return <span className="badge badge-success">Resuelto</span>;
-    case "cerrado":
-      return <span className="badge badge-closed">Cerrado</span>;
-    default:
-      return null;
-  }
 }
 
 /** Icono documento en caja (tarjetas de resumen: esquina superior derecha en el mock) */
