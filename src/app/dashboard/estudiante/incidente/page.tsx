@@ -92,6 +92,10 @@ export default function EstudianteIncidentePage() {
 	const [isStartingCamera, setIsStartingCamera] = useState(false);
 	const [cameraError, setCameraError] = useState<string | null>(null);
 
+	const [modalOpen, setModalOpen] = useState(false);
+	const [modalMessage, setModalMessage] = useState("");
+	const [modalIsError, setModalIsError] = useState(false);
+
 	useEffect(() => {
 		let isMounted = true;
 
@@ -384,24 +388,22 @@ export default function EstudianteIncidentePage() {
 				}),
 			});
 
-			if (!res.ok) {
-				const error = (await res.json()) as { detail?: string };
-				setSubmitMessage(
-					typeof error.detail === "string"
-						? error.detail
-						: "No se pudo crear el incidente. Intenta de nuevo.",
-				);
-				return;
-			}
+			const data = await res.json();
+
+			const incidentId = data?.id || data?.incident_id || "N/A";
+			setModalIsError(false);
+			setModalMessage(`Incidente reportado con éxito. Ticket #${incidentId}`);
+			setModalOpen(true);
 
 			resetForm();
-			setSubmitMessage("Incidente creado correctamente.");
-		} catch {
-			setSubmitMessage("Error de conexion. Verifica tu red e intenta de nuevo.");
-		} finally {
-			setIsSubmitting(false);
-			router.push("/dashboard/estudiante");
-		}
+
+			} catch {
+				setModalIsError(true);
+				setModalMessage("Error de conexión. Verifica tu red e intenta de nuevo.");
+				setModalOpen(true);
+			} finally {
+				setIsSubmitting(false);
+			}
 	}
 
 	if (isLoading) return null;
@@ -595,6 +597,14 @@ export default function EstudianteIncidentePage() {
 					© {new Date().getFullYear()} Universidad San Buenaventura Cali · USB LENS
 				</p>
 			</div>
+			<IncidentResponseModal
+			open={modalOpen}
+			message={modalMessage}
+			isError={modalIsError}
+			onClose={() => setModalOpen(false)}
+			redirectOnClose={!modalIsError ? "/dashboard/estudiante" : undefined}
+		/>
+			
 		</div>
 	);
 }
