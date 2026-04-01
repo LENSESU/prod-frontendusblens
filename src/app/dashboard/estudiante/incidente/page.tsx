@@ -151,8 +151,9 @@ export default function EstudianteIncidentePage() {
 			try {
 				const response = await fetch(`${API}/api/v1/categories/`, {
 					method: "GET",
-					headers: { "Content-Type": "application/json" },
-				});
+					headers:{  "Content-Type": "application/json",
+    						"Authorization": `Bearer ${auth!.accessToken}`,
+				}		});
 
 				if (!response.ok) {
 					throw new Error("No se pudo obtener categorias.");
@@ -184,7 +185,7 @@ export default function EstudianteIncidentePage() {
 		return () => {
 			isMounted = false;
 		};
-	}, []);
+	}, [auth]);
 
 	useEffect(() => {
 		return () => {
