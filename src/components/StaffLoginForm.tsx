@@ -131,6 +131,22 @@ export default function StaffLoginForm({
 
         <div className="card">
           <div className="card-stripe" />
+
+          {loading ? (
+            <div className="card-body-center">
+              <span className="skeleton" style={{ width: 52, height: 52, borderRadius: "var(--radius-md)", alignSelf: "center" }} />
+              <span className="skeleton" style={{ width: "60%", height: 22, alignSelf: "center" }} />
+              <div className="field">
+                <span className="skeleton" style={{ width: "45%", height: 14 }} />
+                <span className="skeleton" style={{ width: "100%", height: 44, borderRadius: "var(--radius-sm)" }} />
+              </div>
+              <div className="field">
+                <span className="skeleton" style={{ width: "35%", height: 14 }} />
+                <span className="skeleton" style={{ width: "100%", height: 44, borderRadius: "var(--radius-sm)" }} />
+              </div>
+              <span className="skeleton" style={{ width: "100%", height: 44, borderRadius: "var(--radius-sm)" }} />
+            </div>
+          ) : (
           <div className="card-body-center">
             <div className="icon-wrap">
               <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
@@ -238,6 +254,7 @@ export default function StaffLoginForm({
               </button>
             </form>
           </div>
+          )}
         </div>
 
         <p className="page-footer">
