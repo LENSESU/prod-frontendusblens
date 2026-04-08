@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { restoreAuthSession, type AuthData } from "@/utils/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -30,7 +31,22 @@ type Category = {
   name: string;
 };
 
+function formatDate(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("es-CO", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
 export default function ListaIncidentesPage() {
+  const router = useRouter();
   const [auth, setAuth] = useState<AuthData | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [categoriesMap, setCategoriesMap] = useState<Record<string, string>>({});
@@ -196,7 +212,23 @@ export default function ListaIncidentesPage() {
             }}
           >
             {incidents.map((incident) => (
-              <div key={incident.id} className="card card-clickable">
+              <div
+                key={incident.id}
+                className="card card-clickable"
+                onClick={() =>
+                  router.push(
+                    `/dashboard/estudiante/dashboard/incidente-detalle?id=${incident.id}`
+                  )
+                }
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    router.push(
+                      `/dashboard/estudiante/dashboard/incidente-detalle?id=${incident.id}`
+                    );
+                }}
+              >
                 <div className="card-stripe" />
 
                 <div className="card-body">
@@ -301,7 +333,7 @@ export default function ListaIncidentesPage() {
                       <line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
                     <span className="text-xs text-secondary">
-                      {incident.created_at}
+                      {formatDate(incident.created_at)}
                     </span>
                   </div>
                 </div>

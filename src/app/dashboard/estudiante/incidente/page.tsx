@@ -505,20 +505,34 @@ export default function EstudianteIncidentePage() {
 							/>
 
 							<div className="field">
-								<label htmlFor="incident-description">Descripcion</label>
+								<label htmlFor="incident-description">
+									Descripcion <span aria-hidden="true" className="field-required">*</span>
+								</label>
 								<textarea
 									id="incident-description"
-									placeholder="Describe brevemente lo ocurrido..."
+									placeholder="Describe brevemente lo ocurrido... (mínimo 10 caracteres)"
 									value={description}
+									required
+									aria-required="true"
+									minLength={10}
 									onChange={(event) => {
 										setDescription(event.target.value);
 										setSubmitMessage(null);
 										clearFieldError("description");
 									}}
 									aria-invalid={Boolean(errors.description)}
-									aria-describedby={errors.description ? "incident-description-error" : undefined}
+									aria-describedby={
+										errors.description
+											? "incident-description-error"
+											: "incident-description-hint"
+									}
 									className={errors.description ? "input-error" : ""}
 								/>
+								{!errors.description && (
+									<p id="incident-description-hint" className="text-small text-secondary">
+										{description.trim().length}/10 caracteres mínimos
+									</p>
+								)}
 								{errors.description ? (
 									<p id="incident-description-error" className="field-error-text">
 										{errors.description}

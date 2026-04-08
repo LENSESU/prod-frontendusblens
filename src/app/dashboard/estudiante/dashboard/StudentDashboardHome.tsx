@@ -29,7 +29,8 @@
 
   /** Filas de ejemplo - usando los estados reales del backend */
   type IncidentMock = {
-    id: string;
+    id: string;      // display: "#65A0ABF6"
+    realId: string;  // UUID completo para navegación
     category: string;
     place: string;
     date: string;
@@ -44,8 +45,62 @@
     return email.split("@")[0];
   }
 
-  function getIncidentDetailHref(incidentId: string): string {
-    return `/dashboard/estudiante/dashboard/incidente-detalle?incident=${encodeURIComponent(incidentId)}`;
+  /* ── Skeleton components ── */
+
+  function SkeletonStatCard() {
+    return (
+      <div className="card flex h-full min-w-0 flex-col">
+        <div className="flex flex-1 flex-col p-3 sm:p-4 md:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <span className="skeleton" style={{ width: 56, height: 32 }} />
+            <span className="skeleton" style={{ width: 40, height: 40, borderRadius: 8 }} />
+          </div>
+          <div className="mt-3" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span className="skeleton" style={{ width: "70%", height: 14 }} />
+            <span className="skeleton" style={{ width: "45%", height: 12 }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function SkeletonTableRow() {
+    return (
+      <tr className="border-b border-[var(--color-border-light)]">
+        {([80, 112, 96, 64, 64] as number[]).map((w, i) => (
+          <td key={i} className="px-3 py-3">
+            <span className="skeleton" style={{ width: w, height: 14 }} />
+          </td>
+        ))}
+      </tr>
+    );
+  }
+
+  function SkeletonMobileItem() {
+    return (
+      <li className="flex items-start gap-3 p-4 border-b border-[var(--color-border-light)]">
+        <span className="skeleton" style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0 }} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+          <span className="skeleton" style={{ width: "40%", height: 14 }} />
+          <span className="skeleton" style={{ width: "65%", height: 14 }} />
+          <span className="skeleton" style={{ width: "50%", height: 12 }} />
+        </div>
+        <span className="skeleton" style={{ width: 60, height: 22, borderRadius: 999, flexShrink: 0, alignSelf: "center" }} />
+      </li>
+    );
+  }
+
+  function SkeletonSuggestion() {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border-b border-[var(--color-border-light)] p-3">
+        <span className="skeleton" style={{ width: 60, height: 64, borderRadius: 8, flexShrink: 0 }} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+          <span className="skeleton" style={{ width: "100%", height: 14 }} />
+          <span className="skeleton" style={{ width: "75%", height: 14 }} />
+          <span className="skeleton" style={{ width: "40%", height: 12 }} />
+        </div>
+      </div>
+    );
   }
 
   /** Icono documento en caja (tarjetas de resumen: esquina superior derecha en el mock) */
@@ -182,6 +237,7 @@
             .slice(0, 5)
             .map((i: any) => ({
               id: `#${i.id.slice(0, 8).toUpperCase()}`,
+              realId: i.id,
               category: categoryMap[i.category_id] || "Sin categoría",
               place: i.campus_place || "Sin ubicación",
               date: new Date(i.created_at).toLocaleDateString(),
@@ -310,16 +366,20 @@
         {/* FILA 2: Tarjetas de stats — layout flex número|icono arriba, títulos abajo */}
         <section className="mb-6 sm:mb-8">
           <div className="grid grid-cols-2 items-stretch gap-2 sm:gap-4 lg:gap-6">
-            <StatSummaryCard
-              value={incidentsCount}
-              title="Mis Incidentes"
-              subtitle="+1 esta semana"
-            />
-            <StatSummaryCard
-              value={suggestionsCount}
-              title="Mis Sugerencias"
-              subtitle="Activos ahora"
-            />
+            {loadingIncidents ? <SkeletonStatCard /> : (
+              <StatSummaryCard
+                value={incidentsCount}
+                title="Mis Incidentes"
+                subtitle="+1 esta semana"
+              />
+            )}
+            {loadingSuggestions ? <SkeletonStatCard /> : (
+              <StatSummaryCard
+                value={suggestionsCount}
+                title="Mis Sugerencias"
+                subtitle="Activos ahora"
+              />
+            )}
           </div>
         </section>
 
@@ -374,11 +434,11 @@
                 </thead>
                 <tbody>
                   {loadingIncidents ? (
-                    <tr>
-                      <td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]">
-                        Cargando...
-                      </td>
-                    </tr>
+                    <>
+                      <SkeletonTableRow />
+                      <SkeletonTableRow />
+                      <SkeletonTableRow />
+                    </>
                   ) : incidents.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]">
@@ -390,7 +450,11 @@
                       <tr
                         key={row.id}
                         className="border-b border-[var(--color-border-light)] last:border-0 cursor-pointer"
-                        onClick={() => router.push(`/dashboard/estudiante/detalleIncidente/${row.id}`) /*Cambiar por la ruta correspondiente a la pagina*/}
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/estudiante/dashboard/incidente-detalle?id=${row.realId}`
+                          )
+                        }
                       >
                         <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
                           {row.id}
@@ -413,16 +477,26 @@
             {/* Vista móvil: lista de tarjetas (misma data que MOCK_INCIDENTS) */}
             <ul className="flex flex-col divide-y divide-[var(--color-border-light)] md:hidden">
               {loadingIncidents ? (
-                <li className="px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
-                  Cargando...
-                </li>
-              ) : incidents.length === 0 ? ( // Cambiar MOCK_INCIDENTS por la variable que se use para los datos de la BD en su momento
+                <>
+                  <SkeletonMobileItem />
+                  <SkeletonMobileItem />
+                  <SkeletonMobileItem />
+                </>
+              ) : incidents.length === 0 ? (
                 <li className="px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
                   No tienes incidentes registrados aún.
                 </li>
               ) : (
                 incidents.map((row) => (
-                  <li key={`m-${row.id}`} onClick={() => router.push(`/dashboard/estudiante/detalleIncidente/${row.id}`) /*Cambiar por la ruta correspondiente a la pagina*/}>
+                  <li
+                    key={`m-${row.id}`}
+                    className="cursor-pointer"
+                    onClick={() =>
+                      router.push(
+                        `/dashboard/estudiante/dashboard/incidente-detalle?id=${row.realId}`
+                      )
+                    }
+                  >
                     <div className="flex items-start gap-3 p-4">
                       <DocIconSmall />
                       <div className="min-w-0 flex-1">
@@ -449,9 +523,10 @@
             </div>
             <div className="p-3 text-sm text-[var(--color-text-secondary)] sm:p-4">
               {loadingSuggestions ? (
-                <p className="py-6 text-center text-sm text-[var(--color-text-secondary)]">
-                  Cargando...
-                </p>
+                <div className="flex flex-col gap-3">
+                  <SkeletonSuggestion />
+                  <SkeletonSuggestion />
+                </div>
               ) : false ? ( // Cambiar por la variable que almacene la longitud de las sugerencias
                 <p className="py-6 text-center text-sm text-[var(--color-text-secondary)]">
                   No hay sugerencias populares por el momento.

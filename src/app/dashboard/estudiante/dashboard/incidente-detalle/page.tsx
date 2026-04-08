@@ -1,240 +1,251 @@
 "use client";
 
-import ProtectedDashboard from "@/components/ProtectedDashboard";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { restoreAuthSession, type AuthData } from "@/utils/auth";
+import { getStatusConfig } from "@/utils/incidentStatus";
 
-type IconProps = { className?: string };
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-function IconShield({ className }: IconProps) {
-	return (
-		<svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-			<path d="M12 3l7 3v6c0 4.5-2.7 7.8-7 9-4.3-1.2-7-4.5-7-9V6l7-3z" />
-		</svg>
-	);
-}
+type IncidentDetail = {
+	id: string;
+	status: string;
+	created_at: string;
+	category_id: string;
+	campus_place: string | null;
+	description: string;
+	latitude: number | null;
+	longitude: number | null;
+	student_id: string;
+};
 
-function IconDoc({ className }: IconProps) {
-	return (
-		<svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-			<path d="M7 3h7l5 5v13H7V3zm7 1.5V9h4.5" />
-		</svg>
-	);
-}
+type Category = {
+	id: string;
+	name: string;
+};
 
-function IconPrint({ className }: IconProps) {
-	return (
-		<svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-			<path d="M7 8V3h10v5M7 17H5a2 2 0 01-2-2v-4a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-2m-10 4v-6h10v6H7z" />
-		</svg>
-	);
-}
-
-function IconShare({ className }: IconProps) {
-	return (
-		<svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-			<path d="M16 6a3 3 0 100-6 3 3 0 000 6zM6 15a3 3 0 100-6 3 3 0 000 6zm10 9a3 3 0 100-6 3 3 0 000 6zM8.6 10.8l4.9-2.6m-4.9 5l4.9 2.6" />
-		</svg>
-	);
-}
-
-function IconInfo({ className }: IconProps) {
-	return (
-		<svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-			<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 6h.01M11 11h2v6h-2z" />
-		</svg>
-	);
-}
-
-function IconLocation({ className }: IconProps) {
-	return (
-		<svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-			<path d="M12 21s7-4.7 7-11a7 7 0 10-14 0c0 6.3 7 11 7 11zm0-8a3 3 0 100-6 3 3 0 000 6z" />
-		</svg>
-	);
-}
-
-function IconCamera({ className }: IconProps) {
-	return (
-		<svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-			<path d="M9 4h6l1 2h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h3l1-2zm3 13a4 4 0 100-8 4 4 0 000 8z" />
-		</svg>
-	);
+function formatDate(iso: string): string {
+	try {
+		return new Intl.DateTimeFormat("es-CO", {
+			day: "2-digit",
+			month: "long",
+			year: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+		}).format(new Date(iso));
+	} catch {
+		return iso;
+	}
 }
 
 export default function EstudianteIncidenteDetallePage() {
+	const searchParams = useSearchParams();
+	const router = useRouter();
+	const incidentId = searchParams.get("id");
+
+	const [auth, setAuth] = useState<AuthData | null>(null);
+	const [incident, setIncident] = useState<IncidentDetail | null>(null);
+	const [categoryName, setCategoryName] = useState<string>("");
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		async function loadSession() {
+			const session = await restoreAuthSession();
+			setAuth(session);
+		}
+		void loadSession();
+	}, []);
+
+	useEffect(() => {
+		if (!auth?.accessToken || !incidentId) {
+			if (!incidentId) setError("No se especificó un incidente.");
+			return;
+		}
+
+		const token = auth.accessToken;
+
+		async function fetchData() {
+			try {
+				const [incRes, catRes] = await Promise.all([
+					fetch(`${API}/api/v1/incidents/${incidentId}/`, {
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${token}`,
+						},
+					}),
+					fetch(`${API}/api/v1/categories/`, {
+						headers: { Authorization: `Bearer ${token}` },
+					}),
+				]);
+
+				if (!incRes.ok) throw new Error("No se pudo cargar el incidente.");
+
+				const incData = (await incRes.json()) as IncidentDetail;
+				setIncident(incData);
+
+				if (catRes.ok) {
+					const catData = (await catRes.json()) as { items?: Category[] } | Category[];
+					const cats: Category[] = Array.isArray(catData)
+						? catData
+						: (catData.items ?? []);
+					const found = cats.find((c) => c.id === incData.category_id);
+					setCategoryName(found?.name ?? "Sin categoría");
+				}
+			} catch {
+				setError("No se pudo cargar la información del incidente.");
+			} finally {
+				setLoading(false);
+			}
+		}
+
+		void fetchData();
+	}, [auth, incidentId]);
+
+	if (loading) {
+		return (
+			<div className="page-centered">
+				<div className="flex items-center gap-sm">
+					<span className="spinner spinner-dark" />
+					<p className="text-secondary">Cargando incidente…</p>
+				</div>
+			</div>
+		);
+	}
+
+	if (error || !incident) {
+		return (
+			<div className="page-centered">
+				<div className="form-wrapper">
+					<div className="alert-error">
+						<p>{error ?? "Incidente no encontrado."}</p>
+					</div>
+					<button
+						type="button"
+						className="btn-secondary"
+						onClick={() => router.back()}
+					>
+						Volver
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	const statusConfig = getStatusConfig(incident.status);
+
 	return (
-		<ProtectedDashboard
-			title="Detalle de incidente"
-			description="Vista de detalle para incidentes."
-			allowedRoles={["student"]}
-			loginPath="/login/estudiante"
-		>
-			{() => (
-				<div className="min-h-screen bg-[var(--color-bg-page)] text-slate-700">
-					<div className="mx-auto max-w-[1280px]">
-						<main className="w-full px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-							<header className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-								<div>
-									<p className="mb-2 text-xs font-semibold text-slate-500">
-										Panel Estudiante <span className="px-1 text-slate-300">›</span>{" "}
-										<span className="text-[var(--color-primary)]">Detalle del Incidente</span>
-									</p>
-									<h1 className="text-3xl font-black tracking-tight text-slate-900">
-										Incidente #2023-08-15-001
-									</h1>
-								</div>
-								<div className="flex flex-wrap items-center gap-3">
-									<button
-										type="button"
-										className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border-light)] bg-white px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50"
-									>
-										<IconPrint className="h-4 w-4 fill-none stroke-current stroke-2" />
-										Imprimir
-									</button>
-									<button
-										type="button"
-										className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(239,99,15,0.22)] transition hover:bg-[var(--color-primary-dark)]"
-									>
-										<IconShare className="h-4 w-4 fill-none stroke-current stroke-2" />
-										Compartir
-									</button>
-								</div>
-							</header>
+		<div className="page-centered">
+			<div className="form-wrapper">
+				<div className="card">
+					<div className="card-stripe" />
+					<div className="card-body">
 
-							<section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
-								<div className="rounded-2xl bg-white p-5 shadow-sm">
-									<div className="flex items-center gap-4">
-										<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
-											<IconShield className="h-6 w-6 fill-none stroke-current stroke-2" />
-										</div>
-										<div>
-											<p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-												ID del incidente
-											</p>
-											<p className="mt-1 text-base font-black text-[var(--color-primary)]">
-												ID-2023-08-15-001
-											</p>
-										</div>
-									</div>
-								</div>
+						<button
+							type="button"
+							className="btn-link"
+							onClick={() => router.back()}
+							style={{ marginBottom: "var(--space-md)" }}
+						>
+							← Volver a mis incidentes
+						</button>
 
-								<div className="rounded-2xl bg-white p-5 shadow-sm">
-									<div className="flex items-center gap-4">
-										<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500">
-											<IconInfo className="h-6 w-6 fill-none stroke-current stroke-2" />
-										</div>
-										<div>
-											<p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-												Estado actual
-											</p>
-											<p className="mt-1 flex items-center gap-2 text-base font-black uppercase text-slate-800">
-												<span className="h-2 w-2 rounded-full bg-blue-500" />
-												Nuevo
-											</p>
-										</div>
-									</div>
-								</div>
-							</section>
+						<div
+							className="flex items-center justify-between"
+							style={{ flexWrap: "wrap", gap: "var(--space-sm)", marginBottom: "var(--space-md)" }}
+						>
+							<span
+								style={{
+									fontFamily: "monospace",
+									fontSize: "var(--font-size-xs)",
+									color: "var(--color-text-hint)",
+									letterSpacing: "0.04em",
+								}}
+							>
+								#{incident.id.slice(0, 8).toUpperCase()}
+							</span>
+							<span className={statusConfig.className}>{statusConfig.label}</span>
+						</div>
 
-							<div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-								<section className="rounded-2xl bg-white p-6 shadow-sm xl:col-span-6">
-									<div className="mb-7 flex items-center gap-2">
-										<IconDoc className="h-5 w-5 fill-none stroke-slate-400 stroke-2" />
-										<h2 className="text-xs font-black uppercase tracking-widest text-slate-500">
-											Informacion del reporte
-										</h2>
-									</div>
+						<h1 className="card-form-title">Detalle del incidente</h1>
 
-									<span className="inline-flex rounded-md bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-										Reporte de estudiante
-									</span>
+						<div className="field">
+							<label>Categoría</label>
+							<p style={{ fontSize: "var(--font-size-body)", color: "var(--color-text-primary)", fontWeight: "var(--font-weight-medium)" }}>
+								{categoryName}
+							</p>
+						</div>
 
-									<div className="mt-6 space-y-5">
-										<div>
-											<p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-												Categoria
-											</p>
-											<p className="mt-1 text-base font-bold text-slate-800">
-												Mantenimiento - Infraestructura
-											</p>
-										</div>
-
-										<div>
-											<p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-												Descripcion
-											</p>
-											<div className="mt-2 rounded-xl bg-slate-50 p-4">
-												<p className="text-sm leading-relaxed text-slate-600">
-													Fuga de agua en el techo del laboratorio 3, cerca de los servicios.
-													Hay varios equipos en riesgo. Anexo foto de la afectacion.
-												</p>
-											</div>
-										</div>
-									</div>
-
-									<div className="mt-7 overflow-hidden rounded-xl bg-gradient-to-br from-slate-200 to-slate-100 p-4">
-										<div className="h-32 rounded-lg bg-gradient-to-tr from-slate-400/70 via-slate-300/40 to-slate-100/80" />
-										<div className="mt-3 flex items-start gap-2">
-											<IconLocation className="h-5 w-5 fill-none stroke-[var(--color-primary)] stroke-2" />
-											<div>
-												<p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-													Ubicacion detallada
-												</p>
-												<p className="text-sm font-bold text-slate-800">Edificio C, Laboratorio 3</p>
-											</div>
-										</div>
-									</div>
-								</section>
-
-								<section className="rounded-2xl bg-white p-6 shadow-sm xl:col-span-6">
-									<div className="mb-7 flex items-center gap-2">
-										<IconCamera className="h-5 w-5 fill-none stroke-slate-400 stroke-2" />
-										<h2 className="text-xs font-black uppercase tracking-widest text-slate-500">
-											Evidencia visual
-										</h2>
-									</div>
-
-									<div className="space-y-6">
-										<div>
-											<div className="mb-2 flex items-center justify-between">
-												<p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-													Antes (reporte)
-												</p>
-												<span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
-													JPG
-												</span>
-											</div>
-											<div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-gradient-to-br from-slate-500/70 to-slate-200">
-												<span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-bold text-slate-500">
-													IMG_BEFORE.JPG
-												</span>
-											</div>
-										</div>
-
-										<div>
-											<p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-												Resolucion (pendiente)
-											</p>
-											<div className="flex aspect-[4/3] flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-center">
-												<IconCamera className="h-8 w-8 fill-none stroke-slate-300 stroke-2" />
-												<p className="mt-2 text-xs font-bold text-slate-400">
-													Subir foto de resolucion
-												</p>
-											</div>
-										</div>
-									</div>
-								</section>
-
-							</div>
-
-							<footer className="mt-10 border-t border-[var(--color-border-light)] pt-7">
-								<p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
-									© 2026 Universidad de San Buenaventura Cali - Sistema de Gestion USB Lens
+						<div className="field">
+							<label>Ubicación</label>
+							<div className="flex items-center gap-xs">
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									style={{ fill: "none", stroke: "var(--color-text-hint)", strokeWidth: 2, flexShrink: 0 }}
+								>
+									<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+									<circle cx="12" cy="10" r="3" />
+								</svg>
+								<p className="text-small text-secondary">
+									{incident.campus_place ?? "Sin ubicación registrada"}
 								</p>
-							</footer>
-						</main>
+							</div>
+						</div>
+
+						<div className="field">
+							<label>Descripción</label>
+							<div
+								style={{
+									background: "var(--color-bg-muted)",
+									borderRadius: "var(--radius-sm)",
+									padding: "var(--space-md)",
+									fontSize: "var(--font-size-small)",
+									color: "var(--color-text-primary)",
+									lineHeight: 1.6,
+									whiteSpace: "pre-wrap",
+									border: "1px solid var(--color-border-light)",
+								}}
+							>
+								{incident.description || "Sin descripción"}
+							</div>
+						</div>
+
+						{(incident.latitude != null || incident.longitude != null) && (
+							<div className="field">
+								<label>Coordenadas GPS</label>
+								<p className="text-small text-secondary">
+									Lat: {incident.latitude} — Lng: {incident.longitude}
+								</p>
+							</div>
+						)}
+
+						<div className="field">
+							<label>Fecha de reporte</label>
+							<div className="flex items-center gap-xs">
+								<svg
+									width="13"
+									height="13"
+									viewBox="0 0 24 24"
+									style={{ fill: "none", stroke: "var(--color-text-hint)", strokeWidth: 2, flexShrink: 0 }}
+								>
+									<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+									<line x1="16" y1="2" x2="16" y2="6" />
+									<line x1="8" y1="2" x2="8" y2="6" />
+									<line x1="3" y1="10" x2="21" y2="10" />
+								</svg>
+								<p className="text-small text-secondary">{formatDate(incident.created_at)}</p>
+							</div>
+						</div>
+
 					</div>
 				</div>
-			)}
-		</ProtectedDashboard>
+
+				<p className="page-footer">
+					© {new Date().getFullYear()} Universidad San Buenaventura Cali · USB LENS
+				</p>
+			</div>
+		</div>
 	);
 }
