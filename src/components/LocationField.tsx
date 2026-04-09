@@ -138,7 +138,15 @@ export default function LocationField({
 					maxLength={100}
 					onChange={(e) => onDetailChange(e.target.value)}
 					aria-label="Detalle de ubicación"
+					aria-describedby="location-detail-hint"
 				/>
+				<p
+					id="location-detail-hint"
+					className="text-small text-secondary"
+					style={{ marginTop: "0.25rem", color: detail.length >= 100 ? "var(--color-error)" : undefined }}
+				>
+					{detail.length}/100 caracteres
+				</p>
 			</div>
 
 			{/* Botones de acción */}

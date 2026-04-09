@@ -224,6 +224,8 @@ export default function EstudianteIncidentePage() {
 			nextErrors.title = "El titulo del incidente es obligatorio.";
 		} else if (trimmedTitle.length < 4) {
 			nextErrors.title = "El titulo debe tener al menos 4 caracteres.";
+		} else if (trimmedTitle.length > 20) {
+			nextErrors.title = "El titulo no puede superar los 20 caracteres.";
 		}
 
 		if (!category) {
@@ -505,15 +507,25 @@ export default function EstudianteIncidentePage() {
 									type="text"
 									placeholder="Ej: Fuga de agua en laboratorio"
 									value={title}
+									maxLength={60}
 									onChange={(event) => {
 										setTitle(event.target.value);
 										setSubmitMessage(null);
 										clearFieldError("title");
 									}}
 									aria-invalid={Boolean(errors.title)}
-									aria-describedby={errors.title ? "incident-title-error" : undefined}
+									aria-describedby={errors.title ? "incident-title-error" : "incident-title-hint"}
 									className={errors.title ? "input-error" : ""}
 								/>
+								{!errors.title && (
+									<p
+										id="incident-title-hint"
+										className="text-small text-secondary"
+										style={{ color: title.trim().length >= 60 ? "var(--color-error)" : undefined }}
+									>
+										{title.trim().length}/20 caracteres
+									</p>
+								)}
 								{errors.title ? (
 									<p id="incident-title-error" className="field-error-text">
 										{errors.title}
@@ -602,7 +614,7 @@ export default function EstudianteIncidentePage() {
 									<p
 										id="incident-description-hint"
 										className="text-small text-secondary"
-										style={{ color: description.trim().length > 200 ? "var(--color-error)" : undefined }}
+										style={{ color: description.trim().length >= 200 ? "var(--color-error)" : undefined }}
 									>
 										{description.trim().length}/200 caracteres
 									</p>
