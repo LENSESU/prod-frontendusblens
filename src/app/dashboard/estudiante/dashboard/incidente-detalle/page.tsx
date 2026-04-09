@@ -10,13 +10,18 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 type IncidentDetail = {
 	id: string;
 	status: string;
+	priority: string | null;
 	created_at: string;
+	updated_at: string | null;
 	category_id: string;
 	campus_place: string | null;
 	description: string;
 	latitude: number | null;
 	longitude: number | null;
 	student_id: string;
+	technician_id: string | null;
+	before_photo_id: string | null;
+	after_photo_id: string | null;
 };
 
 type Category = {
@@ -212,7 +217,7 @@ export default function EstudianteIncidenteDetallePage() {
 							</div>
 						</div>
 
-						{(incident.latitude != null || incident.longitude != null) && (
+{(incident.latitude != null || incident.longitude != null) && (
 							<div className="field">
 								<label>Coordenadas GPS</label>
 								<p className="text-small text-secondary">
