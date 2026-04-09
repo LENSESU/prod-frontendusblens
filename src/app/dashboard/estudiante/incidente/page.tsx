@@ -238,6 +238,8 @@ export default function EstudianteIncidentePage() {
 			nextErrors.description = "La descripcion es obligatoria.";
 		} else if (trimmedDescription.length < 10) {
 			nextErrors.description = "La descripcion debe tener al menos 10 caracteres.";
+		} else if (trimmedDescription.length > 200) {
+			nextErrors.description = "La descripcion no puede superar los 200 caracteres.";
 		}
 
 		if (image) {
@@ -582,6 +584,7 @@ export default function EstudianteIncidentePage() {
 									required
 									aria-required="true"
 									minLength={10}
+									maxLength={200}
 									onChange={(event) => {
 										setDescription(event.target.value);
 										setSubmitMessage(null);
@@ -596,8 +599,12 @@ export default function EstudianteIncidentePage() {
 									className={errors.description ? "input-error" : ""}
 								/>
 								{!errors.description && (
-									<p id="incident-description-hint" className="text-small text-secondary">
-										{description.trim().length}/10 caracteres mínimos
+									<p
+										id="incident-description-hint"
+										className="text-small text-secondary"
+										style={{ color: description.trim().length > 200 ? "var(--color-error)" : undefined }}
+									>
+										{description.trim().length}/200 caracteres
 									</p>
 								)}
 								{errors.description ? (
