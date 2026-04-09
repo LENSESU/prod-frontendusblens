@@ -240,6 +240,16 @@ export default function EstudianteIncidentePage() {
 			nextErrors.description = "La descripcion debe tener al menos 10 caracteres.";
 		}
 
+		if (image) {
+			const allowedTypes = ["image/jpeg", "image/png"];
+			const maxSize = 5 * 1024 * 1024;
+			if (!allowedTypes.includes(image.type)) {
+				nextErrors.image = "Solo se permiten imágenes JPEG o PNG.";
+			} else if (image.size > maxSize) {
+				nextErrors.image = "La imagen no puede superar los 5 MB.";
+			}
+		}
+
 		return nextErrors;
 	}
 
@@ -247,7 +257,22 @@ export default function EstudianteIncidentePage() {
 		const selectedFile = event.target.files?.[0] ?? null;
 		setImage(selectedFile);
 		setSubmitMessage(null);
-		clearFieldError("image");
+
+		if (!selectedFile) {
+			clearFieldError("image");
+			return;
+		}
+
+		const allowedTypes = ["image/jpeg", "image/png"];
+		const maxSize = 5 * 1024 * 1024;
+
+		if (!allowedTypes.includes(selectedFile.type)) {
+			setErrors((current) => ({ ...current, image: "Solo se permiten imágenes JPEG o PNG." }));
+		} else if (selectedFile.size > maxSize) {
+			setErrors((current) => ({ ...current, image: "La imagen no puede superar los 5 MB." }));
+		} else {
+			clearFieldError("image");
+		}
 	}
 
 	function handleOpenFilePicker() {
@@ -391,20 +416,58 @@ export default function EstudianteIncidentePage() {
 
 			const data = await res.json();
 
-			const incidentId = data?.id || data?.incident_id || "N/A";
+			if (!res.ok) {
+				const detail = typeof data?.detail === "string"
+					? data.detail
+					: Array.isArray(data?.detail)
+					? (data.detail as Array<{ msg?: string }>).map((e) => e.msg).join(", ")
+					: "No se pudo guardar el incidente.";
+				setModalIsError(true);
+				setModalMessage(detail);
+				setModalOpen(true);
+				return;
+			}
+
+			const incidentId: string = data?.id || data?.incident_id || "N/A";
+
+			// Subir imagen de evidencia si el usuario adjuntó una
+			if (image && incidentId !== "N/A") {
+				const formData = new FormData();
+				formData.append("photo", image);
+
+				const evidenceRes = await fetch(
+					`${API}/api/v1/incidents/${incidentId}/evidence`,
+					{
+						method: "POST",
+						headers: { Authorization: `Bearer ${auth.accessToken}` },
+						body: formData,
+					},
+				);
+
+				if (!evidenceRes.ok) {
+					// El incidente se creó pero la imagen falló
+					setModalIsError(false);
+					setModalMessage(
+						`Incidente creado (Ticket #${incidentId}), pero no se pudo adjuntar la imagen.`,
+					);
+					setModalOpen(true);
+					resetForm();
+					return;
+				}
+			}
+
 			setModalIsError(false);
 			setModalMessage(`Incidente reportado con éxito. Ticket #${incidentId}`);
 			setModalOpen(true);
-
 			resetForm();
 
-			} catch {
-				setModalIsError(true);
-				setModalMessage("Error de conexión. Verifica tu red e intenta de nuevo.");
-				setModalOpen(true);
-			} finally {
-				setIsSubmitting(false);
-			}
+		} catch {
+			setModalIsError(true);
+			setModalMessage("Error de conexión. Verifica tu red e intenta de nuevo.");
+			setModalOpen(true);
+		} finally {
+			setIsSubmitting(false);
+		}
 	}
 
 	if (isLoading) return null;
@@ -457,11 +520,15 @@ export default function EstudianteIncidentePage() {
 							</div>
 
 							<div className="field">
-								<label htmlFor="incident-category">Categoria</label>
+								<label htmlFor="incident-category">
+									Categoria <span aria-hidden="true" className="field-required">*</span>
+								</label>
 								<select
 									id="incident-category"
 									value={category}
 									disabled={isLoadingCategories}
+									required
+									aria-required="true"
 									onChange={(event) => {
 										setCategory(event.target.value);
 										setSubmitMessage(null);
@@ -505,20 +572,34 @@ export default function EstudianteIncidentePage() {
 							/>
 
 							<div className="field">
-								<label htmlFor="incident-description">Descripcion</label>
+								<label htmlFor="incident-description">
+									Descripcion <span aria-hidden="true" className="field-required">*</span>
+								</label>
 								<textarea
 									id="incident-description"
-									placeholder="Describe brevemente lo ocurrido..."
+									placeholder="Describe brevemente lo ocurrido... (mínimo 10 caracteres)"
 									value={description}
+									required
+									aria-required="true"
+									minLength={10}
 									onChange={(event) => {
 										setDescription(event.target.value);
 										setSubmitMessage(null);
 										clearFieldError("description");
 									}}
 									aria-invalid={Boolean(errors.description)}
-									aria-describedby={errors.description ? "incident-description-error" : undefined}
+									aria-describedby={
+										errors.description
+											? "incident-description-error"
+											: "incident-description-hint"
+									}
 									className={errors.description ? "input-error" : ""}
 								/>
+								{!errors.description && (
+									<p id="incident-description-hint" className="text-small text-secondary">
+										{description.trim().length}/10 caracteres mínimos
+									</p>
+								)}
 								{errors.description ? (
 									<p id="incident-description-error" className="field-error-text">
 										{errors.description}

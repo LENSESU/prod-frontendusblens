@@ -153,6 +153,20 @@ export default function RegisterEstudiantePage() {
 
         <div className="card">
           <div className="card-stripe" />
+
+          {loading ? (
+            <div className="card-body-center">
+              <span className="skeleton" style={{ width: 52, height: 52, borderRadius: "var(--radius-md)", alignSelf: "center" }} />
+              <span className="skeleton" style={{ width: "50%", height: 22, alignSelf: "center" }} />
+              {[45, 40, 55, 35].map((w, i) => (
+                <div key={i} className="field">
+                  <span className="skeleton" style={{ width: `${w}%`, height: 14 }} />
+                  <span className="skeleton" style={{ width: "100%", height: 44, borderRadius: "var(--radius-sm)" }} />
+                </div>
+              ))}
+              <span className="skeleton" style={{ width: "100%", height: 44, borderRadius: "var(--radius-sm)" }} />
+            </div>
+          ) : (
           <div className="card-body-center">
 
             {/* ── FORMULARIO ── */}
@@ -310,6 +324,7 @@ export default function RegisterEstudiantePage() {
               </>
 
           </div>
+          )}
         </div>
 
         <p className="page-footer">© {new Date().getFullYear()} Universidad de San Buenaventura Cali · USB LENS</p>

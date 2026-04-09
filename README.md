@@ -10,9 +10,8 @@ Frontend del Proyecto USB desarrollado con **Next.js**, TypeScript y Tailwind CS
 ## Instalación
 
 ```bash
-npm install 
+npm install
 ```
-
 
 ## Desarrollo
 
@@ -31,12 +30,12 @@ npm start
 
 ## Scripts
 
-| Comando   | Descripción              |
-| --------- | ------------------------ |
-| `npm run dev`   | Servidor de desarrollo   |
-| `npm run build` | Build de producción      |
-| `npm start`     | Servidor de producción   |
-| `npm run lint`  | Ejecutar ESLint          |
+| Comando         | Descripción            |
+| --------------- | ---------------------- |
+| `npm run dev`   | Servidor de desarrollo |
+| `npm run build` | Build de producción    |
+| `npm start`     | Servidor de producción |
+| `npm run lint`  | Ejecutar ESLint        |
 
 ## Dependencias principales
 
@@ -61,7 +60,6 @@ Este proyecto usa las siguientes dependencias clave:
 git clone https://github.com/LENSESU/FrontendUsb.git
 cd FrontendUsb
 ```
-
 
 ### Crear y usar una rama nueva
 
@@ -113,11 +111,10 @@ git commit -m "[TIPO]Descripción del cambio"
 
 Donde `TIPO` puede ser uno de:
 
-- `[ADD]`    → cuando agregas nuevo código o funcionalidad.
+- `[ADD]` → cuando agregas nuevo código o funcionalidad.
 - `[UPDATE]` → cuando actualizas o mejoras algo existente.
 - `[DELETE]` → cuando eliminas código, archivos o funcionalidades.
-- `[FIX]`    → cuando corriges un bug o comportamiento incorrecto.
-
+- `[FIX]` → cuando corriges un bug o comportamiento incorrecto.
 
 ### Ejemplos correctos
 
@@ -126,12 +123,11 @@ Donde `TIPO` puede ser uno de:
 - `git commit -m "[DELETE]Elimina componente no usado"`
 - `git commit -m "[FIX]Corrige validación del formulario de registro"`
 
-
 ### Ejemplos incorrectos (serán rechazados por el hook)
 
-- `git commit -m "feat: agrega login"`  ← falta el formato `[TIPO]texto`
-- `git commit -m "[ADD]"`               ← falta descripción luego del tipo
-- `git commit -m "ADD agrega login"`    ← falta corchetes `[ADD]`
+- `git commit -m "feat: agrega login"` ← falta el formato `[TIPO]texto`
+- `git commit -m "[ADD]"` ← falta descripción luego del tipo
+- `git commit -m "ADD agrega login"` ← falta corchetes `[ADD]`
 
 Si el mensaje no respeta este formato, el hook `commit-msg` bloqueará el commit.
 
@@ -153,7 +149,6 @@ docker run -p 3000:3000 frontend-usb
 
 La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
 
-
 ---
 
 ## Variables de entorno
@@ -161,7 +156,7 @@ La aplicación estará disponible en [http://localhost:3000](http://localhost:30
 Crea un archivo `.env.local` en la raíz del proyecto antes de correr el proyecto:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8080
 ```
 
 > El backend debe estar corriendo (en Docker según su README) para que las llamadas a la API funcionen.
