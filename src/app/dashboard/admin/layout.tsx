@@ -32,13 +32,13 @@ export default function AdminDashboardLayout({
 
         if (!isMounted) return;
 
-        // ❌ No hay sesión
+        //  No hay sesión
         if (!session) {
           router.replace("/login/personal");
           return;
         }
 
-        // 🔐 Validar rol
+        // Validar rol
         const role = normalizeRole(session.role);
 
         if (role !== "administrator") {
@@ -46,7 +46,7 @@ export default function AdminDashboardLayout({
           return;
         }
 
-        // ✅ Todo bien
+      
         setAuth(session);
         setIsReady(true);
       } catch (error) {
@@ -64,11 +64,11 @@ export default function AdminDashboardLayout({
 
   function handleLogout() {
     setIsLoggingOut(true);
-    clearAuth(); // asegúrate que limpie bien el token
+    clearAuth(); 
     router.replace("/login/personal");
   }
 
-  // 🔥 Loader (evita pantalla blanca)
+  // Loader (evita pantalla blanca)
   if (!isReady) {
     return (
       <div className="page-centered">
