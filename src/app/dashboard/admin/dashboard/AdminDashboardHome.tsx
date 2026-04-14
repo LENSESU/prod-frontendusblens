@@ -78,7 +78,7 @@ export default function AdminDashboardHome({ auth }: Props) {
           id: `#${i.id.slice(0, 8).toUpperCase()}`,
           realId: i.id,
           category: categoryMap[i.category_id] || "Sin categoría",
-          user: i.reported_by || "Usuario",
+          user: i.reporter_email || "Usuario",
           status: i.status || "sin estado", 
           priority: i.priority || "Sin prioridad",
           place: i.location || "Sin ubicación",
