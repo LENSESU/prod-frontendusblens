@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { restoreAuthSession } from "@/utils/auth";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 type Props = {
   auth: any;
@@ -9,10 +12,11 @@ type Props = {
 };
 
 type Incident = {
-  id: string;
+  id: string;       
+  realId: string;   
   category: string;
   user: string;
-  status: string;
+  status: string | null;
   priority: string;
   place: string;
   date: string;
@@ -38,38 +42,61 @@ export default function AdminDashboardHome({ auth }: Props) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ── Filtros ──
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterPriority, setFilterPriority] = useState("Todas");
   const [filterCategory, setFilterCategory] = useState("Todas");
 
   useEffect(() => {
-    setTimeout(() => {
-      setIncidents([
-        {
-          id: "#A1B2C3D4",
-          category: "Infraestructura",
-          user: "juan@usb.edu",
-          status: "Pendiente",
-          priority: "Alta",
-          place: "Bloque A",
-          date: "10/04/2026",
-        },
-        {
-          id: "#E5F6G7H8",
-          category: "Seguridad",
-          user: "ana@usb.edu",
-          status: "En progreso",
-          priority: "Media",
-          place: "Biblioteca",
-          date: "09/04/2026",
-        },
-      ]);
-      setLoading(false);
-    }, 1200);
+    async function fetchData() {
+      try {
+        const session = await restoreAuthSession();
+        if (!session?.accessToken) return;
+
+        const token = session.accessToken;
+
+        const [incRes, catRes] = await Promise.all([
+          fetch(`${API}/api/v1/incidents/admin-inbox`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API}/api/v1/categories/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        const incidentsData = await incRes.json();
+        const categoriesData = await catRes.json();
+
+        const incidentsArray = incidentsData.items || [];
+        const categoriesArray = categoriesData.items || [];
+
+        const categoryMap: Record<string, string> = {};
+        categoriesArray.forEach((cat: any) => {
+          categoryMap[cat.id] = cat.name;
+        });
+
+        const mapped: Incident[] = incidentsArray.map((i: any) => ({
+          id: `#${i.id.slice(0, 8).toUpperCase()}`,
+          realId: i.id,
+          category: categoryMap[i.category_id] || "Sin categoría",
+          user: i.reported_by || "Usuario",
+          status: i.status || "sin estado", 
+          priority: i.priority || "Sin prioridad",
+          place: i.location || "Sin ubicación",
+          date: new Date(i.created_at).toLocaleDateString(),
+        }));
+
+        setIncidents(mapped);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
   }, []);
 
-  // ── Lógica de filtrado ──
+  // ── FILTROS ──
   const filtered = incidents.filter((i) => {
     const matchStatus = filterStatus === "Todos" || i.status === filterStatus;
     const matchPriority = filterPriority === "Todas" || i.priority === filterPriority;
@@ -78,7 +105,9 @@ export default function AdminDashboardHome({ auth }: Props) {
   });
 
   const hasActiveFilters =
-    filterStatus !== "Todos" || filterPriority !== "Todas" || filterCategory !== "Todas";
+    filterStatus !== "Todos" ||
+    filterPriority !== "Todas" ||
+    filterCategory !== "Todas";
 
   const clearFilters = () => {
     setFilterStatus("Todos");
@@ -88,7 +117,6 @@ export default function AdminDashboardHome({ auth }: Props) {
 
   if (!auth) return <div>cargando...</div>;
 
-  // ── Selects reutilizables ──
   const FilterSelects = ({ mobile }: { mobile?: boolean }) => (
     <div className={mobile ? "flex flex-col gap-2" : "flex items-center justify-center gap-7 px-8"}>
       <select
