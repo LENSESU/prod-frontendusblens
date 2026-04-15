@@ -63,6 +63,16 @@ export default function AdminDashboardHome({ auth }: Props) {
           }),
         ]);
 
+        if (!incRes.ok) {
+          console.error("Error incidents:", incRes.status);
+          throw new Error("Error cargando incidentes");
+        }
+
+        if (!catRes.ok) {
+          console.error("Error categories:", catRes.status);
+          throw new Error("Error cargando categorías");
+        }
+
         const incidentsData = await incRes.json();
         const categoriesData = await catRes.json();
 
