@@ -34,16 +34,16 @@ function normalizeIncidentStatus(status: string | null | undefined): string {
   return status;
 }
 
-function formatIncidentStatusLabel(status: string): string {
+function formatIncidentStatusLabel(status: string | null): string {
   const normalized = normalizeIncidentStatus(status);
   return STATUS_OPTIONS.find((option) => option.value === normalized)?.label ?? normalized;
 }
 
 function getStatusSelectOptions(): Array<(typeof STATUS_OPTIONS)[number]> {
-  return STATUS_OPTIONS;
+  return [...STATUS_OPTIONS];
 }
 
-function getStatusBadgeClass(status: string): string {
+function getStatusBadgeClass(status: string | null): string {
   const normalized = normalizeIncidentStatus(status);
 
   if (normalized === "Nuevo") return "bg-yellow-100 text-yellow-700";
@@ -181,26 +181,36 @@ export default function AdminDashboardHome({ auth }: Props) {
         setStatusError("No se pudo validar la sesión. Inicia sesión nuevamente.");
         return;
       }
+      const token = session.accessToken;
 
-      const response = await fetch(`${API}/api/v1/incidents/${incident.realId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify({ status: draftStatus }),
-      });
+      async function patchIncidentStatus(nextStatus: string) {
+        const response = await fetch(`${API}/api/v1/incidents/${incident.realId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        });
 
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => null);
-        const errorMessage =
-          (typeof errorBody?.detail === "string" && errorBody.detail) ||
-          errorBody?.detail?.message ||
-          "No se pudo actualizar el estado.";
-        throw new Error(errorMessage);
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => null);
+          const errorMessage =
+            (typeof errorBody?.detail === "string" && errorBody.detail) ||
+            errorBody?.detail?.message ||
+            "No se pudo actualizar el estado.";
+          throw new Error(errorMessage);
+        }
+
+        return response.json();
       }
 
-      const updatedIncident = await response.json();
+      // El backend exige flujo lineal (Nuevo -> En_proceso -> Resuelto).
+      if (currentStatus === "Nuevo" && draftStatus === "Resuelto") {
+        await patchIncidentStatus("En_proceso");
+      }
+
+      const updatedIncident = await patchIncidentStatus(draftStatus);
       const updatedStatus = normalizeIncidentStatus(updatedIncident.status ?? draftStatus);
 
       setIncidents((prev) =>
