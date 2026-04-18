@@ -22,6 +22,35 @@ type Incident = {
   date: string;
 };
 
+const STATUS_OPTIONS = [
+  { value: "Nuevo", label: "Abierto" },
+  { value: "En_proceso", label: "En progreso" },
+  { value: "Resuelto", label: "Resuelto" },
+] as const;
+
+function normalizeIncidentStatus(status: string | null | undefined): string {
+  if (!status) return "Nuevo";
+  if (status === "En progreso") return "En_proceso";
+  return status;
+}
+
+function formatIncidentStatusLabel(status: string | null): string {
+  const normalized = normalizeIncidentStatus(status);
+  return STATUS_OPTIONS.find((option) => option.value === normalized)?.label ?? normalized;
+}
+
+function getStatusSelectOptions(): Array<(typeof STATUS_OPTIONS)[number]> {
+  return [...STATUS_OPTIONS];
+}
+
+function getStatusBadgeClass(status: string | null): string {
+  const normalized = normalizeIncidentStatus(status);
+
+  if (normalized === "Nuevo") return "bg-yellow-100 text-yellow-700";
+  if (normalized === "En_proceso") return "bg-blue-100 text-blue-700";
+  return "bg-green-100 text-green-700";
+}
+
 function getFirstName(email: string) {
   return email.split("@")[0];
 }
@@ -41,6 +70,10 @@ function selectClassMobile(active: boolean) {
 export default function AdminDashboardHome({ auth }: Props) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatingIncidentId, setUpdatingIncidentId] = useState<string | null>(null);
+  const [statusDrafts, setStatusDrafts] = useState<Record<string, string>>({});
+  const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterPriority, setFilterPriority] = useState("Todas");
@@ -89,13 +122,19 @@ export default function AdminDashboardHome({ auth }: Props) {
           realId: i.id,
           category: categoryMap[i.category_id] || "Sin categoría",
           user: i.reporter_email || "Usuario",
-          status: i.status || "sin estado", 
+          status: normalizeIncidentStatus(i.status),
           priority: i.priority || "Sin prioridad",
           place: i.location || "Sin ubicación",
           date: new Date(i.created_at).toLocaleDateString(),
         }));
 
         setIncidents(mapped);
+        setStatusDrafts(
+          mapped.reduce<Record<string, string>>((acc, incident) => {
+            acc[incident.realId] = normalizeIncidentStatus(incident.status);
+            return acc;
+          }, {})
+        );
       } catch (err) {
         console.error(err);
       } finally {
@@ -108,7 +147,8 @@ export default function AdminDashboardHome({ auth }: Props) {
 
   // ── FILTROS ──
   const filtered = incidents.filter((i) => {
-    const matchStatus = filterStatus === "Todos" || i.status === filterStatus;
+    const normalizedStatus = normalizeIncidentStatus(i.status);
+    const matchStatus = filterStatus === "Todos" || normalizedStatus === filterStatus;
     const matchPriority = filterPriority === "Todas" || i.priority === filterPriority;
     const matchCategory = filterCategory === "Todas" || i.category === filterCategory;
     return matchStatus && matchPriority && matchCategory;
@@ -125,6 +165,79 @@ export default function AdminDashboardHome({ auth }: Props) {
     setFilterCategory("Todas");
   };
 
+  async function handleStatusUpdate(incident: Incident) {
+    const draftStatus = statusDrafts[incident.realId] ?? normalizeIncidentStatus(incident.status);
+    const currentStatus = normalizeIncidentStatus(incident.status);
+
+    if (draftStatus === currentStatus) return;
+
+    setUpdatingIncidentId(incident.realId);
+    setStatusError(null);
+    setStatusFeedback(null);
+
+    try {
+      const session = await restoreAuthSession();
+      if (!session?.accessToken) {
+        setStatusError("No se pudo validar la sesión. Inicia sesión nuevamente.");
+        return;
+      }
+      const token = session.accessToken;
+
+      async function patchIncidentStatus(nextStatus: string) {
+        const response = await fetch(`${API}/api/v1/incidents/${incident.realId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => null);
+          const errorMessage =
+            (typeof errorBody?.detail === "string" && errorBody.detail) ||
+            errorBody?.detail?.message ||
+            "No se pudo actualizar el estado.";
+          throw new Error(errorMessage);
+        }
+
+        return response.json();
+      }
+
+      // El backend exige flujo lineal (Nuevo -> En_proceso -> Resuelto).
+      if (currentStatus === "Nuevo" && draftStatus === "Resuelto") {
+        await patchIncidentStatus("En_proceso");
+      }
+
+      const updatedIncident = await patchIncidentStatus(draftStatus);
+      const updatedStatus = normalizeIncidentStatus(updatedIncident.status ?? draftStatus);
+
+      setIncidents((prev) =>
+        prev.map((item) =>
+          item.realId === incident.realId
+            ? {
+                ...item,
+                status: updatedStatus,
+              }
+            : item
+        )
+      );
+
+      setStatusDrafts((prev) => ({
+        ...prev,
+        [incident.realId]: updatedStatus,
+      }));
+
+      setStatusFeedback(`Estado actualizado para ${incident.id}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error inesperado actualizando estado.";
+      setStatusError(message);
+    } finally {
+      setUpdatingIncidentId(null);
+    }
+  }
+
   if (!auth) return <div>cargando...</div>;
 
   const FilterSelects = ({ mobile }: { mobile?: boolean }) => (
@@ -136,8 +249,7 @@ export default function AdminDashboardHome({ auth }: Props) {
       >
         <option value="Todos">Todos los estados</option>
         <option value="Nuevo">Nuevo</option>
-        <option value="Pendiente">Pendiente</option>
-        <option value="En progreso">En progreso</option>
+        <option value="En_proceso">En progreso</option>
         <option value="Resuelto">Resuelto</option>
       </select>
 
@@ -269,6 +381,18 @@ export default function AdminDashboardHome({ auth }: Props) {
           )}
         </div>
 
+        {statusError && (
+          <div className="mx-4 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {statusError}
+          </div>
+        )}
+
+        {statusFeedback && (
+          <div className="mx-4 mt-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            {statusFeedback}
+          </div>
+        )}
+
         {/* ===== DESKTOP ===== */}
         <div className="hidden md:block p-4">
           {loading ? (
@@ -288,6 +412,7 @@ export default function AdminDashboardHome({ auth }: Props) {
                   <th className="px-3 py-2">Prioridad</th>
                   <th className="px-3 py-2">Lugar</th>
                   <th className="rounded-r-md px-3 py-2">Fecha</th>
+                  <th className="rounded-r-md px-3 py-2">Acción</th>
                 </tr>
               </thead>
 
@@ -304,14 +429,8 @@ export default function AdminDashboardHome({ auth }: Props) {
                     <td className="px-3 py-3">{i.user}</td>
 
                     <td className="px-3 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        i.status === "Pendiente"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : i.status === "En progreso"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
-                      }`}>
-                        {i.status}
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(i.status)}`}>
+                        {formatIncidentStatusLabel(i.status)}
                       </span>
                     </td>
 
@@ -329,6 +448,39 @@ export default function AdminDashboardHome({ auth }: Props) {
 
                     <td className="px-3 py-3">{i.place}</td>
                     <td className="px-3 py-3 text-[var(--color-text-secondary)]">{i.date}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={statusDrafts[i.realId] ?? normalizeIncidentStatus(i.status)}
+                          onChange={(e) =>
+                            setStatusDrafts((prev) => ({
+                              ...prev,
+                              [i.realId]: e.target.value,
+                            }))
+                          }
+                          className="rounded-md border border-[var(--color-border-light)] px-2 py-1 text-xs"
+                          disabled={updatingIncidentId === i.realId}
+                        >
+                          {getStatusSelectOptions().map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          onClick={() => handleStatusUpdate(i)}
+                          className="rounded-md border border-[var(--color-primary)] px-2 py-1 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={
+                            updatingIncidentId === i.realId ||
+                            (statusDrafts[i.realId] ?? normalizeIncidentStatus(i.status)) ===
+                              normalizeIncidentStatus(i.status)
+                          }
+                        >
+                          {updatingIncidentId === i.realId ? "Guardando..." : "Guardar"}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -350,8 +502,40 @@ export default function AdminDashboardHome({ auth }: Props) {
                 <p className="font-semibold text-[var(--color-primary)]">{i.id}</p>
                 <p className="text-sm">{i.category}</p>
                 <p className="text-xs text-[var(--color-text-secondary)]">{i.user}</p>
-                <p className="text-xs">Estado: {i.status} · Prioridad: {i.priority}</p>
+                <p className="text-xs">Estado: {formatIncidentStatusLabel(i.status)} · Prioridad: {i.priority}</p>
                 <p className="text-xs text-[var(--color-text-secondary)]">{i.place} · {i.date}</p>
+
+                <div className="mt-2 flex items-center gap-2">
+                    <select
+                      value={statusDrafts[i.realId] ?? normalizeIncidentStatus(i.status)}
+                    onChange={(e) =>
+                      setStatusDrafts((prev) => ({
+                        ...prev,
+                        [i.realId]: e.target.value,
+                      }))
+                    }
+                    className="rounded-md border border-[var(--color-border-light)] px-2 py-1 text-xs"
+                    disabled={updatingIncidentId === i.realId}
+                  >
+                      {getStatusSelectOptions().map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() => handleStatusUpdate(i)}
+                    className="rounded-md border border-[var(--color-primary)] px-2 py-1 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={
+                      updatingIncidentId === i.realId ||
+                      (statusDrafts[i.realId] ?? normalizeIncidentStatus(i.status)) ===
+                        normalizeIncidentStatus(i.status)
+                    }
+                  >
+                    {updatingIncidentId === i.realId ? "Guardando..." : "Guardar"}
+                  </button>
+                </div>
               </li>
             ))
           )}
