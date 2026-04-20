@@ -423,12 +423,13 @@ export default function AdminDashboardHome({ auth }: Props) {
                   <tr
                     key={i.id}
                     className="border-b border-[var(--color-border-light)] hover:bg-[var(--color-bg-muted)] transition"
+                  >
+                    <td className="px-3 py-3 font-medium text-[var(--color-primary)] cursor-pointer"
                     onClick={() => router.push(
                             `/dashboard/admin/dashboard/incidente-detalle?id=${i.realId}`
                           )
                         }
-                  >
-                    <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
+                    >
                       {i.id}
                     </td>
                     <td className="px-3 py-3">{i.category}</td>
