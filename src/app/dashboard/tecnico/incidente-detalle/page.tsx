@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { restoreAuthSession, type AuthData } from "@/utils/auth";
 
@@ -62,7 +63,7 @@ function getPriorityDotColor(priority: string): string {
   return "#9E9E9E";
 }
 
-export default function TecnicoIncidenteDetallePage() {
+function TecnicoIncidenteDetalleContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const incidentId = searchParams.get("id");
@@ -575,10 +576,12 @@ export default function TecnicoIncidenteDetallePage() {
                     border: "1px solid var(--color-border-light)",
                   }}
                 >
-                  <img
+                  <Image
                     src={`${API}/api/v1/photos/${incident.before_photo_id}`}
                     alt="Foto antes del incidente"
-                    style={{ width: "100%", objectFit: "cover", maxHeight: 180, display: "block" }}
+                    width={400}
+                    height={180}
+                    style={{ width: "100%", height: "auto", objectFit: "cover", maxHeight: 180, display: "block" }}
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                   />
                 </div>
@@ -806,7 +809,7 @@ export default function TecnicoIncidenteDetallePage() {
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
                   <span style={{ fontSize: 11, color: "var(--color-text-hint)" }}>
-                    Subir foto "Evidencia"
+                    Subir foto &quot;Evidencia&quot;
                   </span>
                 </div>
               </div>
@@ -846,9 +849,19 @@ export default function TecnicoIncidenteDetallePage() {
         </div>
       </div>
 
-      <p className="page-footer" style={{ marginTop: 32 }}>
-        © {new Date().getFullYear()} Universidad San Buenaventura Cali · USB LENS
-      </p>
+      <div style={{ textAlign: "center", marginTop: 32 }}>
+        <p className="page-footer" style={{ margin: 0, maxWidth: "none" }}>
+          © {new Date().getFullYear()} Universidad San Buenaventura Cali · USB LENS
+        </p>
+      </div>
     </div>
+  );
+}
+
+export default function TecnicoIncidenteDetallePage() {
+  return (
+    <Suspense fallback={<div className="page-centered"><p className="text-secondary">Cargando...</p></div>}>
+      <TecnicoIncidenteDetalleContent />
+    </Suspense>
   );
 }
