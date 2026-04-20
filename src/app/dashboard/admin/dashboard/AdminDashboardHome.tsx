@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { restoreAuthSession } from "@/utils/auth";
+import { IncidentPriorityBadge } from "@/components/IncidentPriorityBadge";
 import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -90,7 +91,7 @@ export default function AdminDashboardHome({ auth }: Props) {
         const token = session.accessToken;
 
         const [incRes, catRes] = await Promise.all([
-          fetch(`${API}/api/v1/incidents/admin-inbox`, {
+          fetch(`${API}/api/v1/incidents/admin-inbox?order_by=priority`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch(`${API}/api/v1/categories/`, {
@@ -442,15 +443,7 @@ export default function AdminDashboardHome({ auth }: Props) {
                     </td>
 
                     <td className="px-3 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        i.priority === "Alta"
-                          ? "bg-red-100 text-red-700"
-                          : i.priority === "Media"
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}>
-                        {i.priority}
-                      </span>
+                      <IncidentPriorityBadge priority={i.priority} />
                     </td>
 
                     <td className="px-3 py-3">{i.place}</td>
@@ -509,7 +502,12 @@ export default function AdminDashboardHome({ auth }: Props) {
                 <p className="font-semibold text-[var(--color-primary)]">{i.id}</p>
                 <p className="text-sm">{i.category}</p>
                 <p className="text-xs text-[var(--color-text-secondary)]">{i.user}</p>
-                <p className="text-xs">Estado: {formatIncidentStatusLabel(i.status)} · Prioridad: {i.priority}</p>
+                <p className="text-xs flex items-center gap-1 flex-wrap">
+                  <span>Estado: {formatIncidentStatusLabel(i.status)}</span>
+                  <span>·</span>
+                  <span>Prioridad:</span>
+                  <IncidentPriorityBadge priority={i.priority} />
+                </p>
                 <p className="text-xs text-[var(--color-text-secondary)]">{i.place} · {i.date}</p>
 
                 <div className="mt-2 flex items-center gap-2">
