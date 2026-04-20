@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { restoreAuthSession } from "@/utils/auth";
+import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -68,6 +69,7 @@ function selectClassMobile(active: boolean) {
 }
 
 export default function AdminDashboardHome({ auth }: Props) {
+  const router = useRouter();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingIncidentId, setUpdatingIncidentId] = useState<string | null>(null);
@@ -422,7 +424,12 @@ export default function AdminDashboardHome({ auth }: Props) {
                     key={i.id}
                     className="border-b border-[var(--color-border-light)] hover:bg-[var(--color-bg-muted)] transition"
                   >
-                    <td className="px-3 py-3 font-medium text-[var(--color-primary)]">
+                    <td className="px-3 py-3 font-medium text-[var(--color-primary)] cursor-pointer"
+                    onClick={() => router.push(
+                            `/dashboard/admin/dashboard/incidente-detalle?id=${i.realId}`
+                          )
+                        }
+                    >
                       {i.id}
                     </td>
                     <td className="px-3 py-3">{i.category}</td>
