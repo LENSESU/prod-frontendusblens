@@ -26,7 +26,7 @@ type IncidentErrors = {
 
 type CategoryOption = { id: string; name: string };
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 const CATEGORY_FALLBACK_OPTIONS: CategoryOption[] = [
 	{ id: "", name: "Infraestructura" },

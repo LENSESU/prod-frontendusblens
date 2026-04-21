@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import CodeInput from "@/components/CodeInput";
 import { getDashboardPathByRole, saveAuth } from "@/utils/auth";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 function VerifyCodeContent() {
   const router = useRouter();

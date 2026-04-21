@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { restoreAuthSession, type AuthData } from "@/utils/auth";
 import { getStatusConfig } from "@/utils/incidentStatus";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 type IncidentDetail = {
 	id: string;
