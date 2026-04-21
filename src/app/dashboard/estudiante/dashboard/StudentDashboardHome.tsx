@@ -8,7 +8,7 @@
   import { useEffect, useState } from "react";
 
 
-  const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
   // función para sacar el userId del token
   function getUserIdFromToken(token: string) {
@@ -242,15 +242,10 @@
               place: i.campus_place || "Sin ubicación",
               date: new Date(i.created_at).toLocaleDateString(),
               status:
-                i.status === "new"
-                  ? "asignado"
-                  : i.status === "en_progreso"
-                  ? "en_progreso"
-                  : i.status === "resuelto"
-                  ? "resuelto"
-                  : i.status === "cerrado"
-                  ? "cerrado"
-                  : "asignado",
+                i.status === "Nuevo" ? "Nuevo"
+                : i.status === "En_proceso" ? "En_proceso"
+                : i.status === "Resuelto" ? "Resuelto"
+                : "Nuevo"
           }));
 
           setIncidents(mapped);

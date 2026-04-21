@@ -81,6 +81,7 @@ export default function AdminDashboardHome({ auth }: Props) {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterPriority, setFilterPriority] = useState("Todas");
   const [filterCategory, setFilterCategory] = useState("Todas");
+  const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchData() {
@@ -119,6 +120,9 @@ export default function AdminDashboardHome({ auth }: Props) {
         categoriesArray.forEach((cat: any) => {
           categoryMap[cat.id] = cat.name;
         });
+
+        const categoryNames = categoriesArray.map((cat: any) => cat.name);
+        setCategories(categoryNames);
 
         const mapped: Incident[] = incidentsArray.map((i: any) => ({
           id: `#${i.id.slice(0, 8).toUpperCase()}`,
@@ -273,9 +277,9 @@ export default function AdminDashboardHome({ auth }: Props) {
         className={mobile ? selectClassMobile(filterCategory !== "Todas") : selectClass(filterCategory !== "Todas")}
       >
         <option value="Todas">Todas las categorías</option>
-        <option value="Infraestructura">Infraestructura</option>
-        <option value="Seguridad">Seguridad</option>
-        <option value="Mantenimiento">Mantenimiento</option>
+        {categories.map((cat) => (
+          <option key={cat} value={cat}>{cat}</option>
+        ))}
       </select>
     </div>
   );

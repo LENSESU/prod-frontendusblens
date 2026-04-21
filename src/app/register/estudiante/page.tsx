@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 const NAME_PATTERN = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+(?:[ '-][A-Za-zÁÉÍÓÚáéíóúÑñÜü]+)*$/;
 const INSTITUTIONAL_EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@correo\.usbcali\.edu\.co$/;
 const PASSWORD_PATTERN =

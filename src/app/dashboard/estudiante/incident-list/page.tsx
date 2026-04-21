@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { restoreAuthSession, type AuthData } from "@/utils/auth";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 //  función para sacar el userId del token
 function getUserIdFromToken(token: string) {
@@ -249,30 +249,16 @@ export default function ListaIncidentesPage() {
                     </span>
                     <span
                       className={
-                        incident.status === "open"
-                          ? "badge"
-                          : incident.status === "in_progress"
-                          ? "badge badge-in-progress"
-                          : incident.status === "closed"
-                          ? "badge badge-closed"
-                          : incident.status === "resolved"
-                          ? "badge badge-success"
-                          : incident.status === "rejected"
-                          ? "badge badge-error"
-                          : "badge"
+                        incident.status === "Nuevo" ? "badge"
+                        : incident.status === "En_proceso" ? "badge badge-in-progress"
+                        : incident.status === "Resuelto" ? "badge badge-success"
+                        : "badge"
                       }
                     >
-                      {incident.status === "open"
-                        ? "Abierto"
-                        : incident.status === "in_progress"
-                        ? "En progreso"
-                        : incident.status === "closed"
-                        ? "Cerrado"
-                        : incident.status === "resolved"
-                        ? "Resuelto"
-                        : incident.status === "rejected"
-                        ? "Rechazado"
-                        : incident.status}
+                      {incident.status === "Nuevo" ? "Abierto"
+                      : incident.status === "En_proceso" ? "En progreso"
+                      : incident.status === "Resuelto" ? "Resuelto"
+                      : incident.status}
                     </span>
                   </div>
 
