@@ -66,6 +66,19 @@
   --color-closed-bg:       #f5f5f5;
   --color-closed-border:   #e0e0e0;
 
+  /* Prioridad de incidentes */
+  --color-priority-alta:        #DC2626;
+  --color-priority-alta-bg:     #FEF2F2;
+  --color-priority-alta-border: #FECACA;
+
+  --color-priority-media:        #EA580C;
+  --color-priority-media-bg:     #FFF7ED;
+  --color-priority-media-border: #FED7AA;
+
+  --color-priority-baja:        #16A34A;
+  --color-priority-baja-bg:     #F0FDF4;
+  --color-priority-baja-border: #BBF7D0;
+
   /* Tipografía */
   --font-family:           'Inter', sans-serif;
   --font-size-h1:          26px;
@@ -662,6 +675,11 @@ p  { font-size: var(--font-size-body); color: var(--color-text-primary); }
 .badge-warning { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning); }
 .badge-in-progress { background: var(--color-in-progress-bg); border-color: var(--color-in-progress-border); color: var(--color-in-progress); }
 .badge-closed { background: var(--color-closed-bg); border-color: var(--color-closed-border); color: var(--color-closed); }
+
+/* Prioridad */
+.badge-priority-alta  { background: var(--color-priority-alta-bg);  border-color: var(--color-priority-alta-border);  color: var(--color-priority-alta); }
+.badge-priority-media { background: var(--color-priority-media-bg); border-color: var(--color-priority-media-border); color: var(--color-priority-media); }
+.badge-priority-baja  { background: var(--color-priority-baja-bg);  border-color: var(--color-priority-baja-border);  color: var(--color-priority-baja); }
 
 
 /* ============================================================
@@ -1311,4 +1329,42 @@ p  { font-size: var(--font-size-body); color: var(--color-text-primary); }
 @media (max-width: 767px) {
   .student-sidebar { display: none; }
   .dashboard-main { padding-top: 0; }
+}
+
+/* ============================================================
+   21. INDICADORES VISUALES DE PRIORIDAD EN LISTAS
+   ============================================================ */
+
+/* Fila de tabla — prioridad Alta */
+.incident-row-alta {
+  box-shadow: inset 4px 0 0 var(--color-priority-alta);
+  background-color: var(--color-priority-alta-bg) !important;
+}
+.incident-row-alta:hover {
+  background-color: #fee2e2 !important;
+}
+
+/* Fila de tabla — prioridad Media */
+.incident-row-media {
+  box-shadow: inset 4px 0 0 var(--color-priority-media);
+}
+
+/* Tarjeta móvil — prioridad Alta */
+.incident-card-alta {
+  border-left: 4px solid var(--color-priority-alta);
+  background: var(--color-priority-alta-bg);
+}
+
+/* Tarjeta móvil — prioridad Media */
+.incident-card-media {
+  border-left: 4px solid var(--color-priority-media);
+}
+
+/* Pulso sutil para badge de Alta prioridad */
+@keyframes priority-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.75; }
+}
+.badge-priority-alta {
+  animation: priority-pulse 2s ease-in-out infinite;
 }
