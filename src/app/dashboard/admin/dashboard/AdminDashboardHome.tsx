@@ -83,6 +83,7 @@ export default function AdminDashboardHome({ auth }: Props) {
   const [filterPriority, setFilterPriority] = useState("Todas");
   const [filterCategory, setFilterCategory] = useState("Todas");
   const [categories, setCategories] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -174,7 +175,7 @@ export default function AdminDashboardHome({ auth }: Props) {
     }
 
     fetchData();
-  }, []);
+  }, [refreshKey]);
 
   // ── FILTROS ──
   const filtered = incidents.filter((i) => {
@@ -261,6 +262,9 @@ export default function AdminDashboardHome({ auth }: Props) {
       }));
 
       setStatusFeedback(`Estado actualizado para ${incident.id}.`);
+      setTimeout(() => setStatusFeedback(null), 4000);
+      // Re-fetch para reflejar datos frescos del backend
+      setRefreshKey((k) => k + 1);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error inesperado actualizando estado.";
       setStatusError(message);

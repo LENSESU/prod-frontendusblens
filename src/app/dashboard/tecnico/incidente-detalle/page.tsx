@@ -76,6 +76,7 @@ function TecnicoIncidenteDetalleContent() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // ── Carga de sesión ──
   useEffect(() => {
@@ -128,7 +129,7 @@ function TecnicoIncidenteDetalleContent() {
     }
 
     void fetchData();
-  }, [auth, incidentId]);
+  }, [auth, incidentId, refreshKey]);
 
   if (loading) {
     return (
@@ -185,11 +186,11 @@ function TecnicoIncidenteDetalleContent() {
           "No se pudo actualizar el estado.";
         throw new Error(msg);
       }
-      const updated = (await res.json()) as IncidentDetail;
-      setIncident((prev) => prev ? { ...prev, status: updated.status ?? newStatus, updated_at: updated.updated_at } : prev);
       const label = newStatus === "En_proceso" ? "En progreso" : "Resuelto";
       setStatusFeedback(`Estado actualizado a "${label}" correctamente.`);
       setTimeout(() => setStatusFeedback(null), 5000);
+      // Re-fetch completo para reflejar datos frescos del backend
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setStatusError(err instanceof Error ? err.message : "Error inesperado al actualizar.");
     } finally {
