@@ -93,7 +93,7 @@ export default function AdminDashboardHome({ auth }: Props) {
         const token = session.accessToken;
 
         const [incRes, catRes] = await Promise.all([
-          fetch(`${API}/api/v1/incidents/admin-inbox?order_by=priority`, {
+          fetch(`${API}/api/v1/incidents/?page=1&limit=100`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch(`${API}/api/v1/categories/`, {
@@ -125,16 +125,22 @@ export default function AdminDashboardHome({ auth }: Props) {
         const categoryNames = categoriesArray.map((cat: any) => cat.name);
         setCategories(categoryNames);
 
-        const mapped: Incident[] = incidentsArray.map((i: any) => ({
-          id: `#${i.id.slice(0, 8).toUpperCase()}`,
-          realId: i.id,
-          category: categoryMap[i.category_id] || "Sin categoría",
-          user: i.reporter_email || "Usuario",
-          status: normalizeIncidentStatus(i.status),
-          priority: i.priority || "Sin prioridad",
-          place: i.location || "Sin ubicación",
-          date: new Date(i.created_at).toLocaleDateString(),
-        }));
+        const PRIORITY_ORDER: Record<string, number> = { Alta: 0, Media: 1, Baja: 2 };
+
+        const mapped: Incident[] = incidentsArray
+          .map((i: any) => ({
+            id: `#${String(i.id).slice(0, 8).toUpperCase()}`,
+            realId: i.id,
+            category: categoryMap[i.category_id] || "Sin categoría",
+            user: i.student_id ? String(i.student_id).slice(0, 8).toUpperCase() : "—",
+            status: normalizeIncidentStatus(i.status),
+            priority: i.priority || "Sin prioridad",
+            place: i.campus_place || "Sin ubicación",
+            date: new Date(i.created_at).toLocaleDateString(),
+          }))
+          .sort((a: Incident, b: Incident) =>
+            (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3)
+          );
 
         setIncidents(mapped);
         setStatusDrafts(
