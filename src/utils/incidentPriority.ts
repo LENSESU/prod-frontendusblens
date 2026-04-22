@@ -17,32 +17,28 @@ export interface PriorityConfig {
 export const INCIDENT_PRIORITY_CONFIG: Record<IncidentPriority, PriorityConfig> = {
   Alta: {
     label: "Alta",
-    className:
-      "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700",
-    icon: "🔴",
+    className: "badge badge-priority-alta",
+    icon: "▲",
     color: "#DC2626",
   },
   Media: {
     label: "Media",
-    className:
-      "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700",
-    icon: "🟠",
+    className: "badge badge-priority-media",
+    icon: "●",
     color: "#EA580C",
   },
   Baja: {
     label: "Baja",
-    className:
-      "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700",
-    icon: "🟢",
+    className: "badge badge-priority-baja",
+    icon: "▼",
     color: "#16A34A",
   },
 };
 
 const UNKNOWN_PRIORITY_CONFIG: PriorityConfig = {
   label: "Sin prioridad",
-  className:
-    "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700",
-  icon: "⚪",
+  className: "badge",
+  icon: "○",
   color: "#6B7280",
 };
 
@@ -51,4 +47,18 @@ export function getPriorityConfig(priority: string | null | undefined): Priority
   return (
     INCIDENT_PRIORITY_CONFIG[priority as IncidentPriority] ?? UNKNOWN_PRIORITY_CONFIG
   );
+}
+
+/** Clase CSS para resaltar filas de tabla según prioridad */
+export function getPriorityRowClass(priority: string | null | undefined): string {
+  if (priority === "Alta") return "incident-row-alta";
+  if (priority === "Media") return "incident-row-media";
+  return "";
+}
+
+/** Clase CSS para resaltar tarjetas móviles según prioridad */
+export function getPriorityCardClass(priority: string | null | undefined): string {
+  if (priority === "Alta") return "incident-card-alta";
+  if (priority === "Media") return "incident-card-media";
+  return "";
 }

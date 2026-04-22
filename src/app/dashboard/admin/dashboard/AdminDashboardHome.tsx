@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { restoreAuthSession } from "@/utils/auth";
 import { IncidentPriorityBadge } from "@/components/IncidentPriorityBadge";
+import { getPriorityRowClass, getPriorityCardClass } from "@/utils/incidentPriority";
 import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -144,6 +145,23 @@ export default function AdminDashboardHome({ auth }: Props) {
         );
       } catch (err) {
         console.error(err);
+        // Datos de ejemplo para desarrollo sin backend
+        const mockIncidents: Incident[] = [
+          { id: "#A1B2C3D4", realId: "a1b2c3d4-0000-0000-0000-000000000001", category: "Infraestructura", user: "estudiante@correo.usbcali.edu.co", status: "Nuevo",      priority: "Alta",  place: "Bloque A – Piso 2", date: new Date().toLocaleDateString() },
+          { id: "#B2C3D4E5", realId: "b2c3d4e5-0000-0000-0000-000000000002", category: "Electricidad",   user: "juan@correo.usbcali.edu.co",       status: "Nuevo",      priority: "Alta",  place: "Cafetería Central",date: new Date().toLocaleDateString() },
+          { id: "#C3D4E5F6", realId: "c3d4e5f6-0000-0000-0000-000000000003", category: "Plomería",       user: "maria@correo.usbcali.edu.co",      status: "En_proceso", priority: "Media", place: "Laboratorio 101",  date: new Date(Date.now() - 86400000).toLocaleDateString() },
+          { id: "#D4E5F6G7", realId: "d4e5f6g7-0000-0000-0000-000000000004", category: "Limpieza",       user: "pedro@correo.usbcali.edu.co",      status: "En_proceso", priority: "Media", place: "Biblioteca – P3",  date: new Date(Date.now() - 86400000).toLocaleDateString() },
+          { id: "#E5F6G7H8", realId: "e5f6g7h8-0000-0000-0000-000000000005", category: "Iluminación",    user: "ana@correo.usbcali.edu.co",        status: "Resuelto",   priority: "Baja",  place: "Parqueadero Norte",date: new Date(Date.now() - 172800000).toLocaleDateString() },
+          { id: "#F6G7H8I9", realId: "f6g7h8i9-0000-0000-0000-000000000006", category: "Infraestructura",user: "luis@correo.usbcali.edu.co",       status: "Resuelto",   priority: "Baja",  place: "Aula 205",         date: new Date(Date.now() - 259200000).toLocaleDateString() },
+        ];
+        setIncidents(mockIncidents);
+        setCategories(["Infraestructura", "Electricidad", "Plomería", "Limpieza", "Iluminación"]);
+        setStatusDrafts(
+          mockIncidents.reduce<Record<string, string>>((acc, i) => {
+            acc[i.realId] = i.status ?? "Nuevo";
+            return acc;
+          }, {})
+        );
       } finally {
         setLoading(false);
       }
@@ -427,7 +445,7 @@ export default function AdminDashboardHome({ auth }: Props) {
                 {filtered.map((i) => (
                   <tr
                     key={i.id}
-                    className="border-b border-[var(--color-border-light)] hover:bg-[var(--color-bg-muted)] transition"
+                    className={`border-b border-[var(--color-border-light)] transition ${getPriorityRowClass(i.priority)} ${i.priority !== "Alta" ? "hover:bg-[var(--color-bg-muted)]" : ""}`}
                   >
                     <td className="px-3 py-3 font-medium text-[var(--color-primary)] cursor-pointer"
                     onClick={() => router.push(
@@ -502,7 +520,7 @@ export default function AdminDashboardHome({ auth }: Props) {
             </li>
           ) : (
             filtered.map((i) => (
-              <li key={i.id} className="p-4">
+              <li key={i.id} className={`p-4 ${getPriorityCardClass(i.priority)}`}>
                 <p className="font-semibold text-[var(--color-primary)]">{i.id}</p>
                 <p className="text-sm">{i.category}</p>
                 <p className="text-xs text-[var(--color-text-secondary)]">{i.user}</p>
