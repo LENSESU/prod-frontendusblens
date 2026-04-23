@@ -54,16 +54,18 @@ export function useTechnicianAssignments() {
     let isMounted = true;
 
     async function fetchData() {
+      const currentAuth = auth;
+      if (!currentAuth) return;
       setLoading(true);
       setError(null);
 
       try {
         const [incRes, catRes] = await Promise.all([
           fetch(`${API}/api/v1/incidents/`, {
-            headers: { Authorization: `Bearer ${auth.accessToken}` },
+            headers: { Authorization: `Bearer ${currentAuth.accessToken}` },
           }),
           fetch(`${API}/api/v1/categories/`, {
-            headers: { Authorization: `Bearer ${auth.accessToken}` },
+            headers: { Authorization: `Bearer ${currentAuth.accessToken}` },
           }),
         ]);
 
@@ -86,7 +88,7 @@ export function useTechnicianAssignments() {
           map[cat.id] = cat.name;
         });
 
-        const userId = getUserIdFromToken(auth.accessToken);
+        const userId = getUserIdFromToken(currentAuth.accessToken);
         const filtered = incidentsArray.filter(
           (incident: TechnicianIncident) => incident.technician_id === userId,
         );
