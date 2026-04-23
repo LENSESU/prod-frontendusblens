@@ -77,6 +77,7 @@ function TecnicoIncidenteDetalleContent() {
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [beforePhotoAvailable, setBeforePhotoAvailable] = useState(true);
 
   // ── Carga de sesión ──
   useEffect(() => {
@@ -98,8 +99,9 @@ function TecnicoIncidenteDetalleContent() {
 
     async function fetchData() {
       try {
+        setBeforePhotoAvailable(true);
         const [incRes, catRes] = await Promise.all([
-          fetch(`${API}/api/v1/incidents/${incidentId}/`, {
+          fetch(`${API}/api/v1/incidents/${incidentId}`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
@@ -133,7 +135,8 @@ function TecnicoIncidenteDetalleContent() {
 
   if (loading) {
     return (
-      <div className="page-centered">
+      <div style={{ padding: "var(--space-xl)", display: "flex", alignItems: "center", gap: "var(--space-sm)", justifyContent: "center" }}>
+        <span className="spinner spinner-dark" />
         <p className="text-secondary">Cargando incidente...</p>
       </div>
     );
@@ -141,7 +144,7 @@ function TecnicoIncidenteDetalleContent() {
 
   if (error || !incident) {
     return (
-      <div className="page-centered">
+      <div className="container" style={{ paddingTop: "var(--space-xl)" }}>
         <div className="form-wrapper">
           <div className="alert-error">
             <p>{error ?? "Incidente no encontrado."}</p>
@@ -159,33 +162,37 @@ function TecnicoIncidenteDetalleContent() {
       ? `https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`
       : null;
 
-  async function handleStatusUpdate(newStatus: string) {
+  async function patchIncidentStatus(nextStatus: "En_proceso" | "Resuelto") {
+    if (!auth?.accessToken || !incident) {
+      throw new Error("No hay sesion activa para actualizar el estado.");
+    }
+
+    const res = await fetch(`${API}/api/v1/incidents/${incident.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth.accessToken}`,
+      },
+      body: JSON.stringify({ status: nextStatus }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      const msg =
+        (typeof body?.detail === "string" && body.detail) ||
+        body?.detail?.message ||
+        "No se pudo actualizar el estado.";
+      throw new Error(msg);
+    }
+  }
+
+  async function handleStatusUpdate(newStatus: "En_proceso" | "Resuelto") {
     if (!auth?.accessToken || !incident) return;
     setUpdatingStatus(true);
     setStatusError(null);
     setStatusFeedback(null);
     try {
-      // Si el técnico salta de Nuevo a Resuelto, primero pasamos por En_proceso
-      if (incident.status === "Nuevo" && newStatus === "Resuelto") {
-        await fetch(`${API}/api/v1/incidents/${incident.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.accessToken}` },
-          body: JSON.stringify({ status: "En_proceso" }),
-        });
-      }
-      const res = await fetch(`${API}/api/v1/incidents/${incident.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.accessToken}` },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        const msg =
-          (typeof body?.detail === "string" && body.detail) ||
-          body?.detail?.message ||
-          "No se pudo actualizar el estado.";
-        throw new Error(msg);
-      }
+      await patchIncidentStatus(newStatus);
       const label = newStatus === "En_proceso" ? "En progreso" : "Resuelto";
       setStatusFeedback(`Estado actualizado a "${label}" correctamente.`);
       setTimeout(() => setStatusFeedback(null), 5000);
@@ -619,14 +626,41 @@ function TecnicoIncidenteDetalleContent() {
                     border: "1px solid var(--color-border-light)",
                   }}
                 >
-                  <Image
-                    src={`${API}/api/v1/photos/${incident.before_photo_id}`}
-                    alt="Foto antes del incidente"
-                    width={400}
-                    height={180}
-                    style={{ width: "100%", height: "auto", objectFit: "cover", maxHeight: 180, display: "block" }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
+                  {beforePhotoAvailable ? (
+                    <Image
+                      src={`${API}/api/v1/photos/${incident.before_photo_id}`}
+                      alt="Foto antes del incidente"
+                      width={400}
+                      height={180}
+                      style={{ width: "100%", height: "auto", objectFit: "cover", maxHeight: 180, display: "block" }}
+                      onError={() => {
+                        setBeforePhotoAvailable(false);
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        height: 140,
+                        border: "1px dashed var(--color-border-light)",
+                        borderRadius: "var(--radius-sm)",
+                        background: "var(--color-bg-muted)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-hint)" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="8" y1="8" x2="16" y2="16" />
+                        <line x1="16" y1="8" x2="8" y2="16" />
+                      </svg>
+                      <span style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-hint)" }}>
+                        Evidencia no disponible
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div
@@ -754,50 +788,50 @@ function TecnicoIncidenteDetalleContent() {
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                  {/* Botón "En progreso" — activo solo cuando el incidente está en Nuevo */}
-                  <button
-                    type="button"
-                    disabled={incident.status !== "Nuevo" || updatingStatus}
-                    onClick={() => handleStatusUpdate("En_proceso")}
-                    style={{
-                      flex: 1,
-                      padding: "10px 8px",
-                      borderRadius: "var(--radius-sm)",
-                      border: "none",
-                      background: incident.status === "Nuevo" ? "#e6f3ff" : "var(--color-bg-muted)",
-                      color: incident.status === "Nuevo" ? "#2397f5" : "var(--color-text-disabled)",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: "var(--font-weight-semibold)",
-                      cursor: incident.status === "Nuevo" && !updatingStatus ? "pointer" : "not-allowed",
-                      opacity: incident.status === "Nuevo" ? 1 : 0.5,
-                      transition: "opacity 0.15s",
-                    }}
-                  >
-                    {updatingStatus && incident.status === "Nuevo" ? "Guardando..." : "En progreso"}
-                  </button>
-
-                  {/* Botón "Resuelto" — activo solo cuando está En_proceso */}
-                  <button
-                    type="button"
-                    disabled={incident.status !== "En_proceso" || updatingStatus}
-                    onClick={() => handleStatusUpdate("Resuelto")}
-                    style={{
-                      flex: 1,
-                      padding: "10px 8px",
-                      borderRadius: "var(--radius-sm)",
-                      border: "none",
-                      background: incident.status === "En_proceso" ? "var(--color-success-bg)" : "var(--color-bg-muted)",
-                      color: incident.status === "En_proceso" ? "var(--color-success)" : "var(--color-text-disabled)",
-                      fontSize: "var(--font-size-xs)",
-                      fontWeight: "var(--font-weight-semibold)",
-                      cursor: incident.status === "En_proceso" && !updatingStatus ? "pointer" : "not-allowed",
-                      opacity: incident.status === "En_proceso" ? 1 : 0.5,
-                      transition: "opacity 0.15s",
-                    }}
-                  >
-                    {updatingStatus && incident.status === "En_proceso" ? "Guardando..." : "Resuelto"}
-                  </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                  {/* Paso 1: Iniciar atención — botón activo solo en estado Nuevo */}
+                  {incident.status === "Nuevo" ? (
+                    <button
+                      type="button"
+                      disabled={updatingStatus}
+                      onClick={() => handleStatusUpdate("En_proceso")}
+                      style={{
+                        padding: "10px 8px",
+                        borderRadius: "var(--radius-sm)",
+                        border: "none",
+                        background: "#e6f3ff",
+                        color: "#2397f5",
+                        fontSize: "var(--font-size-xs)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        cursor: updatingStatus ? "not-allowed" : "pointer",
+                        opacity: updatingStatus ? 0.7 : 1,
+                        transition: "opacity 0.15s",
+                      }}
+                    >
+                      {updatingStatus ? "Guardando..." : "Iniciar atención (En progreso)"}
+                    </button>
+                  ) : (
+                    /* Paso 1 completado — indicador visual, no es botón */
+                    <div
+                      style={{
+                        padding: "10px 8px",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid #2397f5",
+                        background: "#e6f3ff",
+                        color: "#2397f5",
+                        fontSize: "var(--font-size-xs)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Atención iniciada
+                    </div>
+                  )}
                 </div>
 
                 {/* Estado actual del incidente */}
@@ -870,22 +904,27 @@ function TecnicoIncidenteDetalleContent() {
           {/* Botón Incidente Completado — disponible cuando está En_proceso */}
           <button
             type="button"
-            disabled={incident.status === "Resuelto" || updatingStatus}
-            onClick={() => {
-              if (incident.status === "Nuevo") handleStatusUpdate("Resuelto");
-              else if (incident.status === "En_proceso") handleStatusUpdate("Resuelto");
-            }}
+            disabled={incident.status !== "En_proceso" || updatingStatus}
+            onClick={() => handleStatusUpdate("Resuelto")}
             style={{
               width: "100%",
               padding: "16px",
               borderRadius: "var(--radius-md)",
               border: "none",
-              background: incident.status === "Resuelto" ? "var(--color-success)" : "var(--color-primary)",
+              background:
+                incident.status === "Resuelto"
+                  ? "var(--color-success)"
+                  : incident.status === "En_proceso"
+                    ? "var(--color-primary)"
+                    : "var(--color-bg-muted)",
               color: "#fff",
               fontSize: "var(--font-size-small)",
               fontWeight: "var(--font-weight-bold)",
-              cursor: incident.status === "Resuelto" || updatingStatus ? "not-allowed" : "pointer",
-              opacity: incident.status === "Resuelto" ? 0.7 : 1,
+              cursor:
+                incident.status !== "En_proceso" || updatingStatus
+                  ? "not-allowed"
+                  : "pointer",
+              opacity: incident.status === "En_proceso" ? 1 : 0.7,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
