@@ -1,7 +1,7 @@
 import { decodeJWT } from "./jwt";
 
 const AUTH_KEY = "auth";
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export type AuthData = {
   accessToken: string;
