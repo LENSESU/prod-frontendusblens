@@ -216,13 +216,13 @@ export default function AdminDashboardHome({ auth }: Props) {
       const token = session.accessToken;
 
       async function patchIncidentStatus(nextStatus: string) {
-        const response = await fetch(`${API}/api/v1/incidents/${incident.realId}`, {
+        const response = await fetch(`${API}/api/v1/incidents/${incident.realId}/status`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ status: nextStatus }),
+          body: JSON.stringify({ estado: nextStatus }),
         });
 
         if (!response.ok) {

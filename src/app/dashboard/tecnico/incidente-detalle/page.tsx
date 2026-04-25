@@ -167,13 +167,13 @@ function TecnicoIncidenteDetalleContent() {
       throw new Error("No hay sesion activa para actualizar el estado.");
     }
 
-    const res = await fetch(`${API}/api/v1/incidents/${incident.id}`, {
+    const res = await fetch(`${API}/api/v1/incidents/${incident.id}/status`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${auth.accessToken}`,
       },
-      body: JSON.stringify({ status: nextStatus }),
+      body: JSON.stringify({ estado: nextStatus }),
     });
 
     if (!res.ok) {
