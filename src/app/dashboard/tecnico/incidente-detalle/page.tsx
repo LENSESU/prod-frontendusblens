@@ -1,11 +1,34 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useRef, Suspense } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { restoreAuthSession, type AuthData } from "@/utils/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
+// ── Carga dinámica del mapa (Leaflet no funciona en SSR) ──
+const ViewOnlyMap = dynamic(() => import("@/components/ViewOnlyMap"), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{
+        height: 200,
+        background: "var(--color-bg-muted)",
+        borderRadius: "var(--radius-sm)",
+        border: "1px solid var(--color-border-light)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "var(--font-size-xs)",
+        color: "var(--color-text-hint)",
+      }}
+    >
+      Cargando mapa…
+    </div>
+  ),
+});
 
 type IncidentDetail = {
   id: string;
@@ -284,10 +307,11 @@ function TecnicoIncidenteDetalleContent() {
     );
   }
 
-  const mapsUrl =
-    incident.latitude != null && incident.longitude != null
-      ? `https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`
-      : null;
+  const hasCoords = incident.latitude != null && incident.longitude != null;
+
+  const mapsUrl = hasCoords
+    ? `https://www.openstreetmap.org/?mlat=${incident.latitude}&mlon=${incident.longitude}#map=17/${incident.latitude}/${incident.longitude}`
+    : null;
 
   const uploadGuard = canUploadAfter(incident);
 
@@ -558,9 +582,10 @@ function TecnicoIncidenteDetalleContent() {
 
       {/* ══ GRID PRINCIPAL ══ */}
       <div
+        className="incident-detail-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
           gap: 16,
           alignItems: "start",
         }}
@@ -615,18 +640,41 @@ function TecnicoIncidenteDetalleContent() {
                 </div>
               </div>
 
-              {incident.latitude != null && incident.longitude != null ? (
+              {/* ── Mapa OpenStreetMap / Leaflet ── */}
+              {hasCoords ? (
                 <div>
-                  <a href={mapsUrl ?? "#"} target="_blank" rel="noopener noreferrer"
-                    style={{ display: "block", borderRadius: "var(--radius-sm)", overflow: "hidden", border: "1px solid var(--color-border-light)", marginBottom: 6, textDecoration: "none" }}>
-                    <div style={{ height: 120, background: "#e8ecef", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: "var(--color-text-hint)" }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                        <circle cx="12" cy="10" r="3" />
-                      </svg>
-                      <span style={{ fontSize: 11 }}>Google Maps</span>
-                    </div>
+                  {/* Mapa Leaflet solo lectura */}
+                  <div style={{ marginBottom: 6 }}>
+                    <ViewOnlyMap
+                      latitude={incident.latitude!}
+                      longitude={incident.longitude!}
+                    />
+                  </div>
+
+                  {/* Link "Abrir en OpenStreetMap" */}
+                  <a
+                    href={mapsUrl ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-primary)",
+                      textDecoration: "none",
+                      marginBottom: 6,
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                    Abrir en OpenStreetMap
                   </a>
+
+                  {/* Coordenadas + lugar */}
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2">
                       <polygon points="3 11 22 2 13 21 11 13 3 11" />
@@ -815,12 +863,20 @@ function TecnicoIncidenteDetalleContent() {
                       {updatingStatus ? "Guardando..." : "Iniciar atención (En progreso)"}
                     </button>
                   ) : (
-                    <div style={{
-                      padding: "10px 8px", borderRadius: "var(--radius-sm)",
-                      border: "1px solid #2397f5", background: "#e6f3ff", color: "#2397f5",
-                      fontSize: "var(--font-size-xs)", fontWeight: "var(--font-weight-semibold)",
-                      display: "flex", alignItems: "center", gap: 6,
-                    }}>
+                    <div
+                      style={{
+                        padding: "10px 8px",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid #2397f5",
+                        background: "#e6f3ff",
+                        color: "#2397f5",
+                        fontSize: "var(--font-size-xs)",
+                        fontWeight: "var(--font-weight-semibold)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
@@ -1105,12 +1161,6 @@ function TecnicoIncidenteDetalleContent() {
                 : "Marcar como Completado"}
           </button>
         </div>
-      </div>
-
-      <div style={{ textAlign: "center", marginTop: 32 }}>
-        <p className="page-footer" style={{ margin: 0, maxWidth: "none" }}>
-          © {new Date().getFullYear()} Universidad San Buenaventura Cali · USB LENS
-        </p>
       </div>
     </div>
   );
