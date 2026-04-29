@@ -81,6 +81,7 @@ export default function EstudianteIncidentePage() {
 	const [gpsCoords, setGpsCoords] = useState<GpsCoordinates>(null);
 	const [description, setDescription] = useState("");
 	const [image, setImage] = useState<File | null>(null);
+	const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 	const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>(CATEGORY_FALLBACK_OPTIONS);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -195,6 +196,18 @@ export default function EstudianteIncidentePage() {
 			}
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!image) {
+			setImagePreviewUrl(null);
+			return;
+		}
+
+		// Crear y limpiar Object URL para previsualizar archivo local sin fugas de memoria.
+		const nextPreviewUrl = URL.createObjectURL(image);
+		setImagePreviewUrl(nextPreviewUrl);
+		return () => URL.revokeObjectURL(nextPreviewUrl);
+	}, [image]);
 
 	function clearFieldError(field: keyof IncidentErrors) {
 		setErrors((current) => {
@@ -676,6 +689,21 @@ export default function EstudianteIncidentePage() {
 									onChange={handleImageChange}
 									hidden
 								/>
+								{imagePreviewUrl ? (
+									<div style={{ marginTop: "0.75rem" }}>
+										<img
+											src={imagePreviewUrl}
+											alt="Vista previa de evidencia del incidente"
+											style={{
+												width: "100%",
+												maxHeight: "220px",
+												objectFit: "cover",
+												borderRadius: "0.5rem",
+												border: "1px solid var(--color-border)",
+											}}
+										/>
+									</div>
+								) : null}
 								{image ? <p className="text-small text-secondary">Archivo: {image.name}</p> : null}
 								{errors.image ? (
 									<p id="incident-image-error" className="field-error-text">
